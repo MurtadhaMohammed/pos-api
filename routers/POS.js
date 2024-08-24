@@ -280,6 +280,41 @@ router.post("/purchase", sellerAuth, async (req, res) => {
   }
 });
 
+router.post("/active", sellerAuth, async (req, res) => {
+  const { sellerId, macAddress, activeCode } = req.body;
+  if (!hold_id) {
+    return res.status(400).json({ message: "hold_id is required" });
+  }
+
+  try {
+    const response = await fetch(
+      "https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/active-code/device/add-account",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.ACTIVE_TOKEN}`,
+        },
+        body: JSON.stringify({
+          activeCode,
+          macAddress,
+        }),
+      }
+    );
+
+    let data = await response.json();
+
+    // Send back the response from the external API
+    res.status(response.status).json(data);
+  } catch (error) {
+    // Handle errors appropriately
+    console.error("Error making request to external API:", error.message);
+    res.status(500).json({
+      message: "Error making request to external API",
+      error: error.message,
+    });
+  }
+});
+
 // app.post("/v1/purchase", upload.none(), async (req, res) => {
 //   const { hold_id } = req.body;
 //   if (!hold_id) {
