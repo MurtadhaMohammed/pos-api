@@ -282,8 +282,8 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 
 router.post("/active", sellerAuth, async (req, res) => {
   const { sellerId, macAddress, activeCode } = req.body;
-  if (!hold_id) {
-    return res.status(400).json({ message: "hold_id is required" });
+  if (!macAddress || !activeCode) {
+    return res.status(400).json({ message: "macAddress and activeCode are required" });
   }
 
   try {
