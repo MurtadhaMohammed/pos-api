@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  username  String    @unique
+  password  String
+  type      AdminType
+  createtAt DateTime  @default(now())
+  provider  Provider?
+}
+
+model Provider {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String?
+  address   String?
+  cards     Card[]
+  sellers   Seller[]
+  payments  Payment[]
+  adminId   Int?      @unique
+  admin     Admin?    @relation(fields: [adminId], references: [id])
+  createtAt DateTime  @default(now())
+}
+
+model Seller {
+  id            Int       @id @default(autoincrement())
+  name          String
+  username      String    @unique
+  password      String
+  address       String?
+  phone         String?
+  providerId    Int
+  wallet        Wallet[]
+  payments      Payment[]
+  walletAmount  Int       @default(0)
+  paymentAmount Int       @default(0)
+  createtAt     DateTime  @default(now())
+  provider      Provider  @relation(fields: [providerId], references: [id])
+}
+
+model Wallet {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  date      DateTime @default(now())
+  createtAt DateTime @default(now())
+  seller    Seller   @relation(fields: [sellerId], references: [id])
+  sellerId  Int
+}
+
+model Payment {
+  id             Int       @id @default(autoincrement())
+  companyCardID  Int
+  providerCardID Int
+  price          Float
+  qty            Int
+  createtAt      DateTime  @default(now())
+  seller         Seller?   @relation(fields: [sellerId], references: [id])
+  sellerId       Int?
+  item           Json?
+  provider       Provider? @relation(fields: [providerId], references: [id])
+  providerId     Int?
+}
+
+model Card {
+  id         Int       @id @default(autoincrement())
+  price      Float
+  providerId Int?
+  cardType   CardType  @relation(fields: [cardTypeId], references: [id])
+  cardTypeId Int
+  provider   Provider? @relation(fields: [providerId], references: [id])
+  createtAt  DateTime  @default(now())
+}
+
+model CardType {
+  id            Int      @id @default(autoincrement())
+  image         String
+  name          String
+  companyPrice  Float
+  companyCardID Int
+  cards         Card[]
+  createtAt     DateTime @default(now())
+}
+
+enum AdminType {
+  ADMIN
+  PROVIDER
+}
