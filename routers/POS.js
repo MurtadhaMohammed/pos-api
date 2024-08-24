@@ -283,7 +283,9 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 router.post("/active", sellerAuth, async (req, res) => {
   const { sellerId, macAddress, activeCode } = req.body;
   if (!macAddress || !activeCode) {
-    return res.status(400).json({ message: "macAddress and activeCode are required" });
+    return res
+      .status(400)
+      .json({ message: "macAddress and activeCode are required" });
   }
 
   try {
@@ -292,6 +294,7 @@ router.post("/active", sellerAuth, async (req, res) => {
       {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.ACTIVE_TOKEN}`,
         },
         body: JSON.stringify({
