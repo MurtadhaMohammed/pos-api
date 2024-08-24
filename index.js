@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
-  res.json({ msg: "hi ME" });
+  res.json({ msg: "hi ME 222" });
 });
 
 //Dashboard APIs
