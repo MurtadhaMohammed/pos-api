@@ -282,7 +282,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
-  const { sellerId, isHajji = true, name, username } = req?.user;
+  const { sellerId, isHajji, name, username } = req?.user;
   if (!macAddress || !activeCode) {
     return res
       .status(400)
