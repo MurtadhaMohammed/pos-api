@@ -281,12 +281,24 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 });
 
 router.post("/active", sellerAuth, async (req, res) => {
-  const { sellerId, macAddress, activeCode } = req.body;
+  const { paymentId, macAddress, activeCode } = req.body;
+  const sellerId = parseInt(req?.user?.id);
+  const sellerName = parseInt(req?.user?.name);
+  const sellerUserName = parseInt(req?.user?.username);
+  const isHajji = req?.user?.isHajji || false;
   if (!macAddress || !activeCode) {
     return res
       .status(400)
       .json({ message: "macAddress and activeCode are required" });
   }
+
+  if (!isHajji && !paymentId) {
+    return res
+      .status(400)
+      .json({ message: "paymentId is required" });
+  }
+
+
 
   try {
     const response = await fetch(
@@ -306,6 +318,21 @@ router.post("/active", sellerAuth, async (req, res) => {
 
     let data = await response.json();
 
+    if (response.status === 200 && !isHajji) {
+      await prisma.payment.update({
+        where: {
+          id: parseInt(paymentId),
+        },
+        data: {
+          activeBy: {
+            sellerId,
+            sellerName,
+            sellerUserName,
+          },
+        },
+      });
+    }
+
     // Send back the response from the external API
     res.status(response.status).json(data);
   } catch (error) {
@@ -321,9 +348,7 @@ router.post("/active", sellerAuth, async (req, res) => {
 router.post("/refresh", sellerAuth, async (req, res) => {
   const { macAddress } = req.body;
   if (!macAddress) {
-    return res
-      .status(400)
-      .json({ message: "macAddress is required" });
+    return res.status(400).json({ message: "macAddress is required" });
   }
 
   try {
@@ -334,7 +359,7 @@ router.post("/refresh", sellerAuth, async (req, res) => {
         headers: {
           // "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.ACTIVE_TOKEN}`,
-        }
+        },
       }
     );
 

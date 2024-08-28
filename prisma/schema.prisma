@@ -48,6 +48,7 @@ model Seller {
   payments      Payment[]
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
+  isHajji       Boolean   @default(false)
   createtAt     DateTime  @default(now())
   provider      Provider  @relation(fields: [providerId], references: [id])
 }
@@ -73,6 +74,7 @@ model Payment {
   item           Json?
   provider       Provider? @relation(fields: [providerId], references: [id])
   providerId     Int?
+  activeBy       Json?
 }
 
 model Card {
