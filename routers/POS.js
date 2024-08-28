@@ -334,11 +334,7 @@ router.post("/refresh", sellerAuth, async (req, res) => {
         headers: {
           // "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.ACTIVE_TOKEN}`,
-        },
-        body: JSON.stringify({
-          activeCode,
-          macAddress,
-        }),
+        }
       }
     );
 
