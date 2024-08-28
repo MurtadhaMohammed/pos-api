@@ -320,10 +320,10 @@ router.post("/active", sellerAuth, async (req, res) => {
 
 router.post("/refresh", sellerAuth, async (req, res) => {
   const { macAddress } = req.body;
-  if (!macAddress || !activeCode) {
+  if (!macAddress) {
     return res
       .status(400)
-      .json({ message: "macAddress and activeCode are required" });
+      .json({ message: "macAddress is required" });
   }
 
   try {
