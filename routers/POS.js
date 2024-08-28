@@ -283,8 +283,6 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
   const sellerId = parseInt(req?.user?.id);
-  const sellerName = parseInt(req?.user?.name);
-  const sellerUserName = parseInt(req?.user?.username);
   const isHajji = req?.user?.isHajji || false;
   if (!macAddress || !activeCode) {
     return res
@@ -320,11 +318,7 @@ router.post("/active", sellerAuth, async (req, res) => {
           id: parseInt(paymentId),
         },
         data: {
-          activeBy: {
-            sellerId,
-            sellerName,
-            sellerUserName,
-          },
+          activeBy: req?.user,
         },
       });
     }
@@ -332,7 +326,7 @@ router.post("/active", sellerAuth, async (req, res) => {
     // Send back the response from the external API
     res
       .status(response.status)
-      .json({ ...data, sellerId, sellerName, sellerUserName, isHajji });
+      .json({ ...data, ...req?.user, isHajji });
   } catch (error) {
     // Handle errors appropriately
     console.error("Error making request to external API:", error.message);
