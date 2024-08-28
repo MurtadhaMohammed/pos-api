@@ -293,12 +293,8 @@ router.post("/active", sellerAuth, async (req, res) => {
   }
 
   if (!isHajji && !paymentId) {
-    return res
-      .status(400)
-      .json({ message: "paymentId is required" });
+    return res.status(400).json({ message: "paymentId is required" });
   }
-
-
 
   try {
     const response = await fetch(
@@ -334,7 +330,9 @@ router.post("/active", sellerAuth, async (req, res) => {
     }
 
     // Send back the response from the external API
-    res.status(response.status).json(data);
+    res
+      .status(response.status)
+      .json({ ...data, sellerId, sellerName, sellerUserName, isHajji });
   } catch (error) {
     // Handle errors appropriately
     console.error("Error making request to external API:", error.message);
