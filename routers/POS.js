@@ -282,8 +282,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
-  const sellerId = parseInt(req?.user?.id);
-  const isHajji = req?.user?.isHajji || false;
+  const { sellerId, isHajji = true, name, username } = req?.user;
   if (!macAddress || !activeCode) {
     return res
       .status(400)
@@ -320,8 +319,8 @@ router.post("/active", sellerAuth, async (req, res) => {
         data: {
           activeBy: {
             sellerId,
-            sellerName,
-            sellerUserName,
+            name,
+            username,
           },
         },
       });
