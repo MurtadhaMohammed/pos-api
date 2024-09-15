@@ -7,7 +7,8 @@ const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const router = express.Router();
 const FormData = require("form-data");
-const dayjs = require("dayjs");
+const sharp = require("sharp");
+const fs = require("fs");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -102,6 +103,7 @@ router.get("/history", sellerAuth, async (req, res) => {
       createdAt: el?.createtAt,
       code: el?.item?.code,
       name: el?.item?.details?.title,
+      activeState: el.activeBy?.sellerId ? "active" : "pending",
     }));
 
     // Get total count of payments for the seller
@@ -234,6 +236,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
       data = data[0];
     }
 
+    let payment;
     if (!data.error) {
       const card = await prisma.card.findUnique({
         where: {
@@ -241,7 +244,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
         },
       });
 
-      await prisma.payment.create({
+      payment = await prisma.payment.create({
         data: {
           provider: {
             connect: { id: parseInt(providerId) },
@@ -269,7 +272,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
     }
 
     // Send back the response from the external API
-    res.status(response.status).json(data);
+    res.status(response.status).json({ ...data, paymentId: payment?.id });
   } catch (error) {
     // Handle errors appropriately
     console.error("Error making request to external API:", error.message);
@@ -367,6 +370,126 @@ router.post("/refresh", sellerAuth, async (req, res) => {
       message: "Error making request to external API",
       error: error.message,
     });
+  }
+});
+
+router.get("/invoice/:id", async (req, res) => {
+  let id = req.params.id || 0;
+  const width = 384;
+  const height = 610;
+  const padding = 0;
+
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: {
+        id: parseInt(id),
+      },
+      include: {
+        seller: true,
+      },
+    });
+
+    const logoPath = "assets/logo.png"; // Path to logo image
+    const companyName = payment?.seller?.name;
+    const invoiceNumber = `#${payment?.id}`;
+    const cardName = payment?.item?.details?.title;
+    const cardCode = payment?.item?.code;
+    const date = new Date(payment?.createtAt).toISOString();
+    const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
+
+    const lines = msg.match(/.{1,30}/g); // Adjust 40 to your preferred line length
+
+    // Create Arabic text as an SVG with matching width
+    const textSvg = Buffer.from(`
+       <svg width="${width}" height="${height}">
+        <style>
+           *{
+            font-size: 30px;
+             font-weight: bold;
+            }
+
+            .code{
+             font-size: 48px;
+             font-weight: bold;
+            }
+        </style>
+
+        <line x1="4" y1="150" x2="380" y2="150" stroke="black" stroke-width="1" />
+        <text x="50%" y="200" class="compnay" text-anchor="middle">  ${invoiceNumber} :رقم الفاتورة</text>
+
+        <text x="50%" y="240" class="compnay" text-anchor="middle">${companyName}</text>
+        <line x1="4" y1="280" x2="380" y2="280" stroke="black" stroke-width="1" />
+        <text x="50%" y="320" class="compnay" text-anchor="middle">${cardName}</text>
+        <text x="50%" y="374" class="code" text-anchor="middle">${cardCode}</text>
+        <line x1="4" y1="410" x2="380" y2="410" stroke="black" stroke-width="1" />
+        <text x="50%" y="460" class="compnay" text-anchor="middle">${date}</text>
+
+        <rect x="10" y="500" width="360" height="${
+          lines.length * 40
+        }" stroke="black" fill="none" stroke-width="2"/>
+        ${lines
+          .map(
+            (line, index) => `
+          <text x="50%" y="${
+            530 + index * 30
+          }" text-anchor="middle" fill="black">${line}</text>
+        `
+          )
+          .join("")}
+
+      </svg>
+    `);
+
+    const totalWidth = width + 2 * padding;
+    const totalHeight = height + padding + padding;
+
+    sharp({
+      create: {
+        width: totalWidth,
+        height: totalHeight,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }, // White background
+      },
+    })
+      .composite([
+        {
+          input: logoPath,
+          top: 46,
+          left: 76,
+        },
+        {
+          input: textSvg,
+          top: padding,
+          left: padding,
+        },
+      ])
+      .toFile("invoice.png", (err, info) => {
+        if (err) {
+          console.error("Error saving file:", err);
+          res.status(500).json({ message: "Error generating file" });
+        } else {
+          // Read file and convert to base64
+          fs.readFile("invoice.png", (err, data) => {
+            if (err) {
+              console.error("Error reading file:", err);
+              res.status(500).json({ message: "Error reading file" });
+            } else {
+              const base64Image = data.toString("base64");
+              res.status(200).json({ image: base64Image });
+            }
+          });
+        }
+      });
+    // .toFile("invoice.png", (err, info) => {
+    //   if (err) {
+    //     console.error(err);
+    //     res.status(500).send({ message: "ERROR" });
+    //   } else {
+    //     res.status(200).send({ message: "yes" });
+    //   }
+    // });
+  } catch (error) {
+    res.status(500).json({ message: error?.message || "Error" });
   }
 });
 
