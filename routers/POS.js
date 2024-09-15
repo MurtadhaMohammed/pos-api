@@ -463,21 +463,24 @@ router.get("/invoice/:id", async (req, res) => {
           left: padding,
         },
       ])
-      .toFile("invoice.png", (err, info) => {
+      .toFile(`invoices/${payment?.sellerId}-invoice.png`, (err, info) => {
         if (err) {
           console.error("Error saving file:", err);
           res.status(500).json({ message: "Error generating file" });
         } else {
           // Read file and convert to base64
-          fs.readFile("invoice.png", (err, data) => {
-            if (err) {
-              console.error("Error reading file:", err);
-              res.status(500).json({ message: "Error reading file" });
-            } else {
-              const base64Image = data.toString("base64");
-              res.status(200).json({ image: base64Image });
+          fs.readFile(
+            `invoices/${payment?.sellerId}-invoice.png`,
+            (err, data) => {
+              if (err) {
+                console.error("Error reading file:", err);
+                res.status(500).json({ message: "Error reading file" });
+              } else {
+                const base64Image = data.toString("base64");
+                res.status(200).json({ image: base64Image });
+              }
             }
-          });
+          );
         }
       });
     // .toFile("invoice.png", (err, info) => {
