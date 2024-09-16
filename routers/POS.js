@@ -397,13 +397,15 @@ router.get("/invoice/:id", async (req, res) => {
     const date = new Date(payment?.createtAt).toISOString();
     const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
 
-    const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
+    const lines = msg.match(/.{1,30}/g); // Adjust 40 to your preferred line length
 
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
        <svg width="${width}" height="${height}">
         <style>
+        
            *{
+            font-family: 'Arial' !important;
             font-size: 30px;
              font-weight: bold;
             }
@@ -411,15 +413,6 @@ router.get("/invoice/:id", async (req, res) => {
             .code{
              font-size: 48px;
              font-weight: bold;
-            }
-            .date{
-             font-size: 24px;
-            }
-            .date{
-             font-size: 24px;
-            }
-            .msg{
-             font-size: 24px;
             }
         </style>
 
@@ -431,7 +424,7 @@ router.get("/invoice/:id", async (req, res) => {
         <text x="50%" y="320" class="compnay" text-anchor="middle">${cardName}</text>
         <text x="50%" y="374" class="code" text-anchor="middle">${cardCode}</text>
         <line x1="4" y1="410" x2="380" y2="410" stroke="black" stroke-width="1" />
-        <text x="50%" y="460" class="date" text-anchor="middle">${date}</text>
+        <text x="50%" y="460" class="compnay" text-anchor="middle">${date}</text>
 
         <rect x="10" y="500" width="360" height="${
           lines.length * 40
@@ -439,7 +432,7 @@ router.get("/invoice/:id", async (req, res) => {
         ${lines
           .map(
             (line, index) => `
-          <text class="msg" x="50%" y="${
+          <text x="50%" y="${
             530 + index * 30
           }" text-anchor="middle" fill="black">${line}</text>
         `
