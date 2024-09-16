@@ -9,6 +9,7 @@ const router = express.Router();
 const FormData = require("form-data");
 const sharp = require("sharp");
 const fs = require("fs");
+const dayjs = require("dayjs");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -394,7 +395,7 @@ router.get("/invoice/:id", async (req, res) => {
     const invoiceNumber = `#${payment?.id}`;
     const cardName = payment?.item?.details?.title;
     const cardCode = payment?.item?.code;
-    const date = new Date(payment?.createtAt).toISOString();
+    const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
     const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
 
     const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
