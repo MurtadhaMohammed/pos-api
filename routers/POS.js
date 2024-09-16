@@ -403,8 +403,12 @@ router.get("/invoice/:id", async (req, res) => {
     const textSvg = Buffer.from(`
        <svg width="${width}" height="${height}">
         <style>
+        @font-face {
+              font-family: 'Amiri';
+              src: url('https://fonts.googleapis.com/css2?family=Amiri&display=swap');
+            }
            *{
-            font-family: 'Tahoma', sans-serif;
+            font-family: 'Amiri', serif;
             font-size: 30px;
              font-weight: bold;
             }
