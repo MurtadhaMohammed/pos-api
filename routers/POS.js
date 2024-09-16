@@ -397,7 +397,7 @@ router.get("/invoice/:id", async (req, res) => {
     const date = new Date(payment?.createtAt).toISOString();
     const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
 
-    const lines = msg.match(/.{1,30}/g); // Adjust 40 to your preferred line length
+    const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
 
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
@@ -405,13 +405,17 @@ router.get("/invoice/:id", async (req, res) => {
         <style>
         
            *{
-            font-family: 'Arial' !important;
-            font-size: 30px;
+         font-family: 'Times';
+            font-size: 28px;
              font-weight: bold;
             }
 
             .code{
              font-size: 48px;
+             font-weight: bold;
+            }
+            .msg{
+             font-size: 26px;
              font-weight: bold;
             }
         </style>
@@ -432,7 +436,7 @@ router.get("/invoice/:id", async (req, res) => {
         ${lines
           .map(
             (line, index) => `
-          <text x="50%" y="${
+          <text class="msg" x="50%" y="${
             530 + index * 30
           }" text-anchor="middle" fill="black">${line}</text>
         `
