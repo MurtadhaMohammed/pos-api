@@ -415,7 +415,7 @@ router.get("/invoice/:id", async (req, res) => {
              font-weight: bold;
             }
             .msg{
-             font-size: 26px;
+             font-size: 24px;
              font-weight: bold;
             }
         </style>
