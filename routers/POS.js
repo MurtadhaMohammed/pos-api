@@ -397,7 +397,7 @@ router.get("/invoice/:id", async (req, res) => {
     const date = new Date(payment?.createtAt).toISOString();
     const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
 
-    const lines = msg.match(/.{1,24}/g); // Adjust 40 to your preferred line length
+    const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
 
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
@@ -419,7 +419,7 @@ router.get("/invoice/:id", async (req, res) => {
              font-size: 24px;
             }
             .msg{
-             font-size: 20px;
+             font-size: 24px;
             }
         </style>
 
