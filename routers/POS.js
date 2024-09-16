@@ -404,7 +404,7 @@ router.get("/invoice/:id", async (req, res) => {
        <svg width="${width}" height="${height}">
         <style>
            *{
-            font-family: sans-serif;
+            font-family: 'Tahoma', sans-serif;
             font-size: 30px;
              font-weight: bold;
             }
