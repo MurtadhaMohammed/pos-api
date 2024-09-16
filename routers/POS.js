@@ -419,7 +419,6 @@ router.get("/invoice/:id", async (req, res) => {
              font-weight: bold;
             }
         </style>
-
         <line x1="4" y1="150" x2="380" y2="150" stroke="black" stroke-width="1" />
         <text x="50%" y="200" class="compnay" text-anchor="middle">  ${invoiceNumber} :رقم الفاتورة</text>
         <text x="50%" y="240" class="compnay" text-anchor="middle">${companyName}</text>
