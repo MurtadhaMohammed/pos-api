@@ -419,7 +419,7 @@ router.get("/invoice/:id", async (req, res) => {
              font-size: 24px;
             }
             .msg{
-             font-size: 26px;
+             font-size: 20px;
             }
         </style>
 
