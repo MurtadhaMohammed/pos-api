@@ -4,3 +4,4 @@ node_modules
 pos-api
 yarn.lock
 invoices
+ecosystem.config.js
