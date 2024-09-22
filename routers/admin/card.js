@@ -5,10 +5,10 @@ const router = express.Router();
 
 // Create Card
 router.post("/", adminAuth, async (req, res) => {
-  const { price, providerId, cardTypeId } = req.body;
+  const { price, providerId, cardTypeId, companyPrice } = req.body;
   try {
     const card = await prisma.card.create({
-      data: { price, providerId, cardTypeId },
+      data: { price, providerId, cardTypeId, companyPrice },
     });
     res.json(card);
   } catch (error) {
@@ -25,7 +25,7 @@ router.get("/", async (req, res) => {
     const cards = await prisma.card.findMany({
       include: {
         cardType: true,
-        provider: true
+        provider: true,
       },
       take,
       skip,
@@ -50,11 +50,11 @@ router.get("/:id", async (req, res) => {
 // Update Card by ID
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { price, providerId, cardTypeId } = req.body;
+  const { price, providerId, cardTypeId, companyPrice } = req.body;
   try {
     const card = await prisma.card.update({
       where: { id: Number(id) },
-      data: { price, providerId, cardTypeId },
+      data: { price, providerId, cardTypeId, companyPrice },
     });
     res.json(card);
   } catch (error) {

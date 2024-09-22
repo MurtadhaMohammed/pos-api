@@ -78,20 +78,20 @@ model Payment {
 }
 
 model Card {
-  id         Int       @id @default(autoincrement())
-  price      Float
-  providerId Int?
-  cardType   CardType  @relation(fields: [cardTypeId], references: [id])
-  cardTypeId Int
-  provider   Provider? @relation(fields: [providerId], references: [id])
-  createtAt  DateTime  @default(now())
+  id           Int       @id @default(autoincrement())
+  price        Float
+  companyPrice Float
+  providerId   Int?
+  cardType     CardType  @relation(fields: [cardTypeId], references: [id])
+  cardTypeId   Int
+  provider     Provider? @relation(fields: [providerId], references: [id])
+  createtAt    DateTime  @default(now())
 }
 
 model CardType {
   id            Int      @id @default(autoincrement())
   image         String
   name          String
-  companyPrice  Float
   companyCardID Int
   cards         Card[]
   createtAt     DateTime @default(now())

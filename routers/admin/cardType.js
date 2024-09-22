@@ -5,10 +5,10 @@ const router = express.Router();
 
 // Create CardType
 router.post("/", adminAuth, async (req, res) => {
-  const { image, name, companyCardID, companyPrice } = req.body;
+  const { image, name, companyCardID } = req.body;
   try {
     const cardType = await prisma.cardType.create({
-      data: { image, name, companyCardID, companyPrice },
+      data: { image, name, companyCardID },
     });
     res.json(cardType);
   } catch (error) {
