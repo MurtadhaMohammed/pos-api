@@ -1,6 +1,8 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
+const providerAuth = require("../../middleware/providerAuth");
+const dashboardAuth = require("../../middleware/dashboardAuth");
 const router = express.Router();
 
 // Create Card
@@ -17,12 +19,21 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 // Read all Cards
-router.get("/", async (req, res) => {
+router.get("/", dashboardAuth, async (req, res) => {
   try {
+    const { type, id } = req?.user;
+    const isProvider = type === "PROVIDER";
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip | 0);
-    const total = await prisma.card.count();
+    const where = isProvider
+      ? {
+          providerId: parseInt(id),
+        }
+      : {};
+
+    const total = await prisma.card.count({ where });
     const cards = await prisma.card.findMany({
+      where,
       include: {
         cardType: true,
         provider: true,

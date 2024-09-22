@@ -31,8 +31,18 @@ router.post("/", dashboardAuth, async (req, res) => {
 router.get("/", dashboardAuth, async (req, res) => {
   const take = parseInt(req.query.take || 8);
   const skip = parseInt(req.query.skip | 0);
-  const total = await prisma.seller.count();
+  const { type, id } = req?.user;
+  const isProvider = type === "PROVIDER";
+
+  const where = isProvider
+    ? {
+        providerId: parseInt(id),
+      }
+    : {};
+
+  const total = await prisma.seller.count({ where });
   const sellers = await prisma.seller.findMany({
+    where,
     include: {
       provider: true,
       wallet: true,

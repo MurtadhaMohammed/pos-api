@@ -17,7 +17,7 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 // Read all CardTypes
-router.get("/", async (req, res) => {
+router.get("/", adminAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip | 0);

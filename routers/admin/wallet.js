@@ -7,15 +7,21 @@ const router = express.Router();
 router.post("/", dashboardAuth, async (req, res) => {
   const { amount, sellerId, date } = req.body;
   try {
-    const wallet = await prisma.wallet.create({
-      data: { amount, sellerId, date },
-    });
-
     const seller = await prisma.seller.findUnique({
       where: {
         id: parseInt(sellerId),
       },
     });
+
+    const wallet = await prisma.wallet.create({
+      data: {
+        amount,
+        sellerId,
+        date,
+        providerId: parseInt(seller?.providerId),
+      },
+    });
+
     await prisma.seller.update({
       where: {
         id: parseInt(sellerId),
@@ -35,8 +41,17 @@ router.get("/", dashboardAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip | 0);
-    const total = await prisma.wallet.count();
+    const { type, id } = req?.user;
+    const isProvider = type === "PROVIDER";
+
+    const where = isProvider
+      ? {
+          providerId: parseInt(id),
+        }
+      : {};
+    const total = await prisma.wallet.count({ where });
     const wallets = await prisma.wallet.findMany({
+      where,
       include: {
         seller: {
           include: {

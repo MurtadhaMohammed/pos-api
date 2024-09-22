@@ -31,6 +31,7 @@ model Provider {
   cards     Card[]
   sellers   Seller[]
   payments  Payment[]
+  wallets   Wallet[]
   adminId   Int?      @unique
   admin     Admin?    @relation(fields: [adminId], references: [id])
   createtAt DateTime  @default(now())
@@ -54,12 +55,14 @@ model Seller {
 }
 
 model Wallet {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  date      DateTime @default(now())
-  createtAt DateTime @default(now())
-  seller    Seller   @relation(fields: [sellerId], references: [id])
-  sellerId  Int
+  id         Int       @id @default(autoincrement())
+  amount     Float
+  date       DateTime  @default(now())
+  createtAt  DateTime  @default(now())
+  seller     Seller    @relation(fields: [sellerId], references: [id])
+  sellerId   Int
+  Provider   Provider? @relation(fields: [providerId], references: [id])
+  providerId Int?
 }
 
 model Payment {
