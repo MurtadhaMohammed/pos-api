@@ -400,24 +400,27 @@ router.get("/invoice/:id", async (req, res) => {
 
     const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
 
+
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
-       <svg width="${width}" height="${height}">
+       <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
         <style>
-        
-           *{
-         font-family: 'Times';
-            font-size: 28px;
-             font-weight: bold;
+            @import url('https://fonts.cdnfonts.com/css/somar-sans');
+
+            *{
+              font-family: 'Somar Sans', sans-serif;
+              font-size: 28px;
+              font-weight: bold;
             }
 
             .code{
-             font-size: 48px;
-             font-weight: bold;
+              font-size: 48px;
+              font-weight: bold;
             }
             .msg{
-             font-size: 24px;
-             font-weight: bold;
+          font-family: 'Somar Sans', sans-serif;
+              font-size: 24px;
+              font-weight: bold;
             }
         </style>
         <line x1="4" y1="150" x2="380" y2="150" stroke="black" stroke-width="1" />
@@ -488,18 +491,18 @@ router.get("/invoice/:id", async (req, res) => {
           );
         }
       });
-    // .toFile("invoice.png", (err, info) => {
-    //   if (err) {
-    //     console.error(err);
-    //     res.status(500).send({ message: "ERROR" });
-    //   } else {
-    //     res.status(200).send({ message: "yes" });
-    //   }
-    // });
   } catch (error) {
     res.status(500).json({ message: error?.message || "Error" });
   }
 });
+// .toFile("invoice.png", (err, info) => {
+//   if (err) {
+//     console.error(err);
+//     res.status(500).send({ message: "ERROR" });
+//   } else {
+//     res.status(200).send({ message: "yes" });
+//   }
+// });
 
 // app.post("/v1/purchase", upload.none(), async (req, res) => {
 //   const { hold_id } = req.body;
