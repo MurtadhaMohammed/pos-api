@@ -178,7 +178,11 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
 
     let data = await response.json();
     if (response.status === 200) {
-      data = { ...data[0], walletAmount: seller.walletAmount };
+      data = {
+        ...data[0],
+        walletAmount: seller.walletAmount,
+        price: card?.price,
+      };
     }
     res.status(response.status).json(data);
   } catch (error) {
@@ -399,7 +403,6 @@ router.get("/invoice/:id", async (req, res) => {
     const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
 
     const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
-
 
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
