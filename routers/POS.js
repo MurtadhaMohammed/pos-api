@@ -78,7 +78,6 @@ router.get("/history", sellerAuth, async (req, res) => {
     // Get page and limit from query parameters, with default values
     const page = parseInt(req.query.page) || 1; // default to page 1
     const limit = parseInt(req.query.limit) || 10; // default to 10 items per page
-
     // Calculate the number of records to skip
     const skip = (page - 1) * limit;
 
@@ -93,6 +92,7 @@ router.get("/history", sellerAuth, async (req, res) => {
         createtAt: "desc",
       },
     });
+
 
     // Map and format the response
     let data = payments?.map((el) => ({
@@ -116,7 +116,6 @@ router.get("/history", sellerAuth, async (req, res) => {
 
     // Calculate total pages
     const totalPages = Math.ceil(totalPayments / limit);
-
     // Respond with paginated data and meta information
     res.json({
       currentPage: page,

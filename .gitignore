@@ -5,3 +5,5 @@ pos-api
 yarn.lock
 invoices
 ecosystem.config.js
+static
+static/*
