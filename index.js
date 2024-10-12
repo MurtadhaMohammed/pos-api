@@ -10,6 +10,7 @@ const paymentRouter = require("./routers/admin/payment");
 const cardRouter = require("./routers/admin/card");
 const cardTypeRouter = require("./routers/admin/cardType");
 const POSRouter = require("./routers/POS");
+const path = require("path");
 require("dotenv").config();
 
 app.use(cors());
