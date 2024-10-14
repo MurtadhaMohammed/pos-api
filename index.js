@@ -10,17 +10,14 @@ const paymentRouter = require("./routers/admin/payment");
 const cardRouter = require("./routers/admin/card");
 const cardTypeRouter = require("./routers/admin/cardType");
 const POSRouter = require("./routers/POS");
-const path = require("path");
 require("dotenv").config();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, "static")));
-
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "static", "*"));
+  res.json({ msg: "server is live" });
 });
 
 //Dashboard APIs
