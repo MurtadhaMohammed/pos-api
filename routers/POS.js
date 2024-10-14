@@ -399,7 +399,7 @@ router.get("/invoice/:id", async (req, res) => {
     const cardName = payment?.item?.details?.title;
     const cardCode = payment?.item?.code;
     const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
-    const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6883";
+    const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6233";
 
     const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
 
