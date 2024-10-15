@@ -18,7 +18,7 @@ router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const seller = await prisma.seller.findUnique({
-    where: { username },
+    where: { username, active: true },
   });
 
   if (!seller) {
@@ -35,7 +35,17 @@ router.post("/login", async (req, res) => {
   res.json({ token, ...seller });
 });
 
-// Login seller
+router.get("/check-seller-active", sellerAuth, async (req, res) => {
+  let seller = await prisma.seller.findUnique({
+    where: {
+      id: parseInt(req?.user?.id),
+      active: true,
+    },
+  });
+  if (!seller) res.status(401).json({ success: false, error: "Invalid User!" });
+  else res.json({ success: true });
+});
+
 router.get("/user", sellerAuth, async (req, res) => {
   let seller = await prisma.seller.findUnique({
     where: {
@@ -92,7 +102,6 @@ router.get("/history", sellerAuth, async (req, res) => {
         createtAt: "desc",
       },
     });
-
 
     // Map and format the response
     let data = payments?.map((el) => ({
@@ -152,6 +161,12 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
         id: parseInt(req?.user?.id),
       },
     });
+
+    if (!seller.active) {
+      return res.status(500).json({
+        error: "This account is not active!",
+      });
+    }
 
     if (seller.walletAmount < card.price) {
       return res.status(500).json({

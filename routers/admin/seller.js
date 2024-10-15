@@ -67,6 +67,19 @@ router.put("/:id", dashboardAuth, async (req, res) => {
   res.json(seller);
 });
 
+// Update seller cative
+router.put("/active/:id", dashboardAuth, async (req, res) => {
+  const { id } = req.params;
+  const { active } = req.body;
+
+  const seller = await prisma.seller.update({
+    where: { id: parseInt(id) },
+    data: { active },
+  });
+
+  res.json(seller);
+});
+
 router.put("/reset-password/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;

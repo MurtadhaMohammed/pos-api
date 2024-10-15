@@ -51,6 +51,7 @@ model Seller {
   paymentAmount Int       @default(0)
   isHajji       Boolean   @default(false)
   createtAt     DateTime  @default(now())
+  active        Boolean   @default(true)
   provider      Provider  @relation(fields: [providerId], references: [id])
 }
 
