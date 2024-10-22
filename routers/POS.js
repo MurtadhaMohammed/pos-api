@@ -108,6 +108,7 @@ router.get("/history", sellerAuth, async (req, res) => {
     let data = payments?.map((el) => ({
       id: el?.id,
       price: el?.price,
+      companyPrice: el?.companyPrice || el?.price || 0,
       image: el?.item?.details?.cover,
       providerId: el?.providerId,
       companyCardID: el?.companyCardID,
@@ -275,6 +276,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
           },
           companyCardID: data?.id,
           price: card?.price,
+          companyPrice: card?.companyPrice,
           qty: 1,
           providerCardID: parseInt(providerCardID),
           item: data,
