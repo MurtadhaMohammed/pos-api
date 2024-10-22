@@ -71,6 +71,7 @@ model Payment {
   companyCardID  Int
   providerCardID Int
   price          Float
+  companyPrice   Float?
   qty            Int
   createtAt      DateTime  @default(now())
   seller         Seller?   @relation(fields: [sellerId], references: [id])

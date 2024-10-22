@@ -314,7 +314,6 @@ router.post("/active", sellerAuth, async (req, res) => {
       .status(400)
       .json({ message: "macAddress and activeCode are required" });
   }
-
   if (!isHajji && !paymentId) {
     return res.status(400).json({ message: "paymentId is required" });
   }
