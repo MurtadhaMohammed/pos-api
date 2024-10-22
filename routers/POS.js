@@ -418,7 +418,6 @@ router.get("/invoice/:id", async (req, res) => {
     const phone = "07855551040, 07755551040";
 
     //const lines = msg.match(/.{1,29}/g); // Adjust 40 to your preferred line length
-
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
