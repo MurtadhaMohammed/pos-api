@@ -195,7 +195,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       data = {
         ...data[0],
         walletAmount: seller.walletAmount,
-        price: card?.companyPrice,
+        price: card?.price,
       };
     }
     res.status(response.status).json(data);
