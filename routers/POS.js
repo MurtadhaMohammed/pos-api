@@ -395,7 +395,7 @@ router.post("/refresh", sellerAuth, async (req, res) => {
 router.get("/invoice/:id", async (req, res) => {
   let id = req.params.id || 0;
   const width = 384;
-  const height = 610;
+  const height = 710;
   const padding = 0;
 
   try {
@@ -408,15 +408,16 @@ router.get("/invoice/:id", async (req, res) => {
       },
     });
 
-    const logoPath = "assets/logo.png"; // Path to logo image
+    const logoPath = "assets/logo2.png"; // Path to logo image
     const companyName = payment?.seller?.name;
     const invoiceNumber = `#${payment?.id}`;
     const cardName = payment?.item?.details?.title;
     const cardCode = payment?.item?.code;
+    const price = payment?.price;
     const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
-    const msg = "اذا كانت لديك اي مشكله يرجى التواصل معنا عبر الرقم 6233";
+    const phone = "07710990982, 0780990982";
 
-    const lines = msg.match(/.{1,28}/g); // Adjust 40 to your preferred line length
+    //const lines = msg.match(/.{1,29}/g); // Adjust 40 to your preferred line length
 
     // Create Arabic text as an SVG with matching width
     const textSvg = Buffer.from(`
@@ -431,12 +432,17 @@ router.get("/invoice/:id", async (req, res) => {
             }
 
             .code{
-              font-size: 48px;
+              font-size: 46px;
               font-weight: bold;
+            }
+            .price{
+              font-size: 34px;
+              font-weight: bold;
+              direction: rtl;
             }
             .msg{
           font-family: 'Somar Sans', sans-serif;
-              font-size: 24px;
+              font-size: 22px;
               font-weight: bold;
             }
         </style>
@@ -446,22 +452,14 @@ router.get("/invoice/:id", async (req, res) => {
         <line x1="4" y1="280" x2="380" y2="280" stroke="black" stroke-width="1" />
         <text x="50%" y="320" class="compnay" text-anchor="middle">${cardName}</text>
         <text x="50%" y="374" class="code" text-anchor="middle">${cardCode}</text>
-        <line x1="4" y1="410" x2="380" y2="410" stroke="black" stroke-width="1" />
-        <text x="50%" y="460" class="compnay" text-anchor="middle">${date}</text>
-
-        <rect x="10" y="500" width="360" height="${
-          lines.length * 40
-        }" stroke="black" fill="none" stroke-width="2"/>
-        ${lines
-          .map(
-            (line, index) => `
-          <text class="msg" x="50%" y="${
-            530 + index * 30
-          }" text-anchor="middle" fill="black">${line}</text>
-        `
-          )
-          .join("")}
-
+        <text x="50%" y="430" class="price" text-anchor="middle">السعر: ${Number(price).toLocaleString("en")} د.ع </text>
+        <line x1="4" y1="460" x2="380" y2="460" stroke="black" stroke-width="1" />
+        <text x="50%" y="500" class="compnay" text-anchor="middle">${date}</text>
+        
+        <rect x="10" y="540" width="360" height="140" stroke="black" fill="none" stroke-width="2"/>
+        <text x="50%" y="580" class="compnay" text-anchor="middle">اذا كانت لديك اي مشكلة</text>
+        <text x="50%" y="615" class="msg" text-anchor="middle">تواصل معنا عبر الارقام التالية</text>
+        <text x="50%" y="650" class="msg" text-anchor="middle">${phone}</text>
       </svg>
     `);
 
