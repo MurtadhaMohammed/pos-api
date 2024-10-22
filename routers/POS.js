@@ -196,6 +196,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
         ...data[0],
         walletAmount: seller.walletAmount,
         price: card?.price,
+        companyPrice: card?.companyPrice,
       };
     }
     res.status(response.status).json(data);
@@ -451,7 +452,9 @@ router.get("/invoice/:id", async (req, res) => {
         <line x1="4" y1="280" x2="380" y2="280" stroke="black" stroke-width="1" />
         <text x="50%" y="320" class="compnay" text-anchor="middle">${cardName}</text>
         <text x="50%" y="374" class="code" text-anchor="middle">${cardCode}</text>
-        <text x="50%" y="430" class="price" text-anchor="middle">السعر: ${Number(price).toLocaleString("en")} د.ع </text>
+        <text x="50%" y="430" class="price" text-anchor="middle">السعر: ${Number(
+          price
+        ).toLocaleString("en")} د.ع </text>
         <line x1="4" y1="460" x2="380" y2="460" stroke="black" stroke-width="1" />
         <text x="50%" y="500" class="compnay" text-anchor="middle">${date}</text>
         
