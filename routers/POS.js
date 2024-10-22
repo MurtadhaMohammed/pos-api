@@ -415,7 +415,7 @@ router.get("/invoice/:id", async (req, res) => {
     const cardCode = payment?.item?.code;
     const price = payment?.price;
     const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
-    const phone = "07710990982, 0780990982";
+    const phone = "07855551040, 07755551040";
 
     //const lines = msg.match(/.{1,29}/g); // Adjust 40 to your preferred line length
 
