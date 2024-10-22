@@ -228,7 +228,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
       },
     });
 
-    if (seller.walletAmount < card.price) {
+    if (seller?.walletAmount < card?.companyPrice) {
       res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -284,8 +284,8 @@ router.post("/purchase", sellerAuth, async (req, res) => {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - card?.price,
-          paymentAmount: seller.paymentAmount + card?.price,
+          walletAmount: seller.walletAmount - card?.companyPrice,
+          paymentAmount: seller.paymentAmount + card?.companyPrice,
         },
       });
     }
