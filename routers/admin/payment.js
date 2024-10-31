@@ -37,23 +37,56 @@ router.post("/", sellerAuth, async (req, res) => {
 router.get("/", dashboardAuth, async (req, res) => {
   try {
     // Get the page and limit from query parameters, with default values
+    const q = req.query.q || undefined; // Default to page 1 if not provided
     const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
     const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
 
     // Calculate the number of items to skip based on the page and limit
     const skip = (page - 1) * limit;
 
+    let condetions = {};
+
+    if (q && q.trim() !== "")
+      condetions = {
+        OR: [
+          {
+            item: {
+              path: ["code"],
+              string_contains: q,
+            },
+          },
+          {
+            seller: {
+              OR: [
+                {
+                  phone: {
+                    contains: q || undefined,
+                  },
+                },
+                {
+                  name: {
+                    contains: q || undefined,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      };
     // Fetch the total count of records to calculate total pages
-    const totalPayments = await prisma.payment.count();
+    const totalPayments = await prisma.payment.count({
+      where: condetions,
+    });
 
     // Fetch the payments with pagination
     const payments = await prisma.payment.findMany({
-      skip: skip, // Skip the previous records
-      take: limit, // Limit the number of records fetched
+      where: condetions,
       include: {
         seller: true,
         provider: true,
       },
+      skip: skip, // Skip the previous records
+      take: limit, // Limit the number of records fetched
       orderBy: {
         createtAt: "desc",
       },
