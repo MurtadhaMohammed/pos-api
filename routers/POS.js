@@ -352,7 +352,6 @@ router.post("/active", sellerAuth, async (req, res) => {
     }
 
     // Send back the response from the external API
-    console.log(data)
     res.status(response.status).json(data);
   } catch (error) {
     // Handle errors appropriately
