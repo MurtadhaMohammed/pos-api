@@ -61,6 +61,9 @@ router.get("/", dashboardAuth, async (req, res) => {
       },
       take,
       skip,
+      orderBy: {
+        createtAt: "desc",
+      },
     });
     res.json({ data: wallets, total });
   } catch (error) {

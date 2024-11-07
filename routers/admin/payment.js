@@ -108,4 +108,56 @@ router.get("/", dashboardAuth, async (req, res) => {
   }
 });
 
+// Get payment cards
+router.get("/pos/:id", dashboardAuth, async (req, res) => {
+  const { id } = req.params;
+  const { startDate, endDate } = req.query;
+
+  try {
+    const dateFilter =
+      startDate && endDate
+        ? {
+          createtAt: {
+              gte: new Date(startDate),
+              lte: new Date(endDate),
+            },
+          }
+        : {};
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        sellerId: parseInt(id),
+        ...dateFilter,
+      },
+      select: {
+        item: true,
+        price: true,
+        companyPrice: true,
+      },
+    });
+
+    let data = {
+      total: payments?.length,
+      price: payments?.map((el) => el.price)?.reduce((a, b) => a + b, 0),
+      companyPrice: payments
+        ?.map((el) => el.companyPrice)
+        ?.reduce((a, b) => a + b, 0),
+      details: Object.entries(
+        payments.reduce((acc, current) => {
+          const title = current.item.details.title;
+          if (!acc[title]) {
+            acc[title] = 0;
+          }
+          acc[title] += 1;
+          return acc;
+        }, {})
+      ).map(([title, count]) => ({ title, count })),
+    };
+
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
