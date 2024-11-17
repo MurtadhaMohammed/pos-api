@@ -117,7 +117,7 @@ router.get("/pos/:id", dashboardAuth, async (req, res) => {
     const dateFilter =
       startDate && endDate
         ? {
-          createtAt: {
+            createtAt: {
               gte: new Date(startDate),
               lte: new Date(endDate),
             },
@@ -157,6 +157,58 @@ router.get("/pos/:id", dashboardAuth, async (req, res) => {
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
+  const { paymentId } = req.params;
+
+  try {
+    // Fetch payment and related seller in a single query
+    const payment = await prisma.payment.findUnique({
+      where: { id: Number(paymentId) },
+      include: {
+        seller: true,
+      },
+    });
+
+    // Validate payment and seller existence
+    if (!payment || !payment.seller) {
+      return res.status(404).json({
+        success: false,
+        msg: "Payment or associated seller not found",
+      });
+    }
+
+    // Perform refund transaction
+    await prisma.$transaction([
+      // Update seller's wallet amount
+      prisma.seller.update({
+        where: {
+          id: payment.sellerId,
+        },
+        data: {
+          walletAmount: { increment: payment.companyPrice }, // Increment wallet amount
+        },
+      }),
+      // Delete payment record
+      prisma.payment.delete({
+        where: {
+          id: Number(paymentId),
+        },
+      }),
+    ]);
+
+    // Respond with success
+    res.json({ success: true, msg: "Refund processed successfully" });
+  } catch (error) {
+    // Handle errors
+    console.error("Error processing refund:", error.message);
+    res.status(500).json({
+      success: false,
+      msg: "Internal server error",
+      error: error.message,
+    });
   }
 });
 
