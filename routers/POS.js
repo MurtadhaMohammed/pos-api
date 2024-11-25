@@ -32,7 +32,7 @@ router.post("/login", async (req, res) => {
   }
 
   const token = jwt.sign(seller, JWT_SECRET);
-  res.json({ token, ...seller });
+  res.json({ token, ...seller, password: "You can't see it 😉" });
 });
 
 router.get("/check-seller-active", sellerAuth, async (req, res) => {
@@ -395,8 +395,9 @@ router.post("/refresh", sellerAuth, async (req, res) => {
   }
 });
 
-router.get("/invoice/:id", async (req, res) => {
+router.get("/invoice/:id", sellerAuth, async (req, res) => {
   let id = req.params.id || 0;
+  const { sellerId } = req?.user;
   const width = 384;
   const height = 710;
   const padding = 0;
@@ -405,6 +406,7 @@ router.get("/invoice/:id", async (req, res) => {
     const payment = await prisma.payment.findUnique({
       where: {
         id: parseInt(id),
+        sellerId: parseInt(sellerId),
       },
       include: {
         seller: true,
