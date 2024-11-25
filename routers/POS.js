@@ -395,9 +395,9 @@ router.post("/refresh", sellerAuth, async (req, res) => {
   }
 });
 
-router.get("/invoice/:id", sellerAuth, async (req, res) => {
+router.get("/invoice/:id", async (req, res) => {
   let id = req.params.id || 0;
-  const { sellerId } = req?.user;
+  // const { sellerId } = req?.user;
   const width = 384;
   const height = 710;
   const padding = 0;
@@ -406,7 +406,7 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
     const payment = await prisma.payment.findUnique({
       where: {
         id: parseInt(id),
-        sellerId: parseInt(sellerId),
+        // sellerId: parseInt(sellerId),
       },
       include: {
         seller: true,
