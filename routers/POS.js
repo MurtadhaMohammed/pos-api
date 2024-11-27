@@ -502,10 +502,12 @@ router.get("/invoice/:id", async (req, res) => {
             `invoices/${payment?.sellerId}-invoice.png`,
             (err, data) => {
               if (err) {
+                fs.unlinkSync(`invoices/${payment?.sellerId}-invoice.png`);
                 console.error("Error reading file:", err);
                 res.status(500).json({ message: "Error reading file" });
               } else {
                 const base64Image = data.toString("base64");
+                fs.unlinkSync(`invoices/${payment?.sellerId}-invoice.png`);
                 res.status(200).json({ image: base64Image });
               }
             }
