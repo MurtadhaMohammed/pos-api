@@ -33,6 +33,68 @@ router.post("/", sellerAuth, async (req, res) => {
   }
 });
 
+// Create Payment
+// router.post("/create", sellerAuth, async (req, res) => {
+//   const { providerId, sellerId, code, companyCardID, cardId } = req.body;
+//   try {
+//     const card = await prisma.card.findUnique({
+//       where: {
+//         id: parseInt(cardId),
+//       },
+//       include: {
+//         cardType: true,
+//       },
+//     });
+
+//     const data = {
+//       id: companyCardID,
+//       code,
+//       status: "sold",
+//       details: {
+//         cover: card.cardType.image,
+//         price: card.companyPrice,
+//         title: card.cardType.name,
+//       },
+//       createdAt: "2024-10-03T11:35:24.158Z",
+//       updatedAt: "2024-10-03T19:02:13.170Z",
+//     };
+
+//     const payment = await prisma.payment.create({
+//       data: {
+//         provider: {
+//           connect: { id: parseInt(providerId) },
+//         },
+//         seller: {
+//           connect: { id: parseInt(sellerId) },
+//         },
+//         companyCardID: parseInt(companyCardID),
+//         price: card?.price,
+//         companyPrice: card?.companyPrice,
+//         qty: 1,
+//         providerCardID: parseInt(cardId),
+//         item: data,
+//       },
+//     });
+
+//     await prisma.seller.update({
+//       where: {
+//         id: parseInt(sellerId),
+//       },
+//       data: {
+//         walletAmount: {
+//           decrement: card?.companyPrice,
+//         },
+//         paymentAmount: {
+//           increment: card?.companyPrice,
+//         },
+//       },
+//     });
+//     req.status(200).json(payment);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
 // Read all Payments
 router.get("/", dashboardAuth, async (req, res) => {
   try {

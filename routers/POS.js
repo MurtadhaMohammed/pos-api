@@ -65,6 +65,9 @@ router.get("/cards", sellerAuth, async (req, res) => {
     const cards = await prisma.card.findMany({
       where: {
         providerId: Number(req?.user?.providerId),
+        cardType: {
+          active: true,
+        },
       },
       include: {
         cardType: true,
@@ -182,7 +185,8 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     formdata.append("companyCardTypeId", companyCardTypeId);
 
     const response = await fetch(
-      "https://api.nojoomalrabiaa.com/v1/companyDashboard/cardHolder",
+      "https://client.nojoomalrabiaa.com/api/client/hold-card",
+      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/cardHolder",
       {
         method: "POST",
         headers: {
@@ -191,7 +195,6 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
         body: formdata,
       }
     );
-
     let data = await response.json();
     if (response.status === 200) {
       data = {
@@ -203,6 +206,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     }
     res.status(response.status).json(data);
   } catch (error) {
+    console.log(error);
     console.error("Error making request to external API:", error.message);
     res.status(500).json({
       message: "Error making request to external API",
@@ -243,7 +247,8 @@ router.post("/purchase", sellerAuth, async (req, res) => {
     formdata.append("hold_id", hold_id);
 
     const response = await fetch(
-      "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
+      "https://client.nojoomalrabiaa.com/api/client/purchase",
+      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
       {
         method: "POST",
         headers: {
