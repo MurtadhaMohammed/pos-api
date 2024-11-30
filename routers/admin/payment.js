@@ -102,11 +102,18 @@ router.get("/", dashboardAuth, async (req, res) => {
     const q = req.query.q || undefined; // Default to page 1 if not provided
     const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
     const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
+    const { type, id } = req?.user;
+    const isProvider = type === "PROVIDER";
 
+    const where = isProvider
+      ? {
+          providerId: parseInt(id),
+        }
+      : {};
     // Calculate the number of items to skip based on the page and limit
     const skip = (page - 1) * limit;
 
-    let condetions = {};
+    let condetions = { ...where };
 
     if (q && q.trim() !== "")
       condetions = {
@@ -134,6 +141,7 @@ router.get("/", dashboardAuth, async (req, res) => {
             },
           },
         ],
+        ...where,
       };
     // Fetch the total count of records to calculate total pages
     const totalPayments = await prisma.payment.count({
