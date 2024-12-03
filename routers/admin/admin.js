@@ -40,13 +40,17 @@ router.post("/reset", adminAuth, async (req, res) => {
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
-    const admin = await prisma.admin.findUnique({ where: { username } });
+    const admin = await prisma.admin.findUnique({
+      where: { username },
+      include: { provider: true },
+    });
     if (admin && (await bcrypt.compare(password, admin.password))) {
       const token = jwt.sign(
         {
           id: admin.id,
           username: admin.username,
           type: admin.type,
+          providerId: admin?.provider?.id,
         },
         JWT_SECRET,
         { expiresIn: "1h" }
