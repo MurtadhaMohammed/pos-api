@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -28,13 +22,13 @@ model Provider {
   name      String
   phone     String?
   address   String?
-  cards     Card[]
-  sellers   Seller[]
-  payments  Payment[]
-  wallets   Wallet[]
   adminId   Int?      @unique
-  admin     Admin?    @relation(fields: [adminId], references: [id])
   createtAt DateTime  @default(now())
+  cards     Card[]
+  payments  Payment[]
+  admin     Admin?    @relation(fields: [adminId], references: [id])
+  sellers   Seller[]
+  wallets   Wallet[]
 }
 
 model Seller {
@@ -45,14 +39,14 @@ model Seller {
   address       String?
   phone         String?
   providerId    Int
-  wallet        Wallet[]
-  payments      Payment[]
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
   isHajji       Boolean   @default(false)
   createtAt     DateTime  @default(now())
   active        Boolean   @default(true)
+  payments      Payment[]
   provider      Provider  @relation(fields: [providerId], references: [id])
+  wallet        Wallet[]
 }
 
 model Wallet {
@@ -60,10 +54,10 @@ model Wallet {
   amount     Float
   date       DateTime  @default(now())
   createtAt  DateTime  @default(now())
-  seller     Seller    @relation(fields: [sellerId], references: [id])
   sellerId   Int
-  Provider   Provider? @relation(fields: [providerId], references: [id])
   providerId Int?
+  Provider   Provider? @relation(fields: [providerId], references: [id])
+  seller     Seller    @relation(fields: [sellerId], references: [id])
 }
 
 model Payment {
@@ -71,15 +65,15 @@ model Payment {
   companyCardID  Int
   providerCardID Int
   price          Float
-  companyPrice   Float?
   qty            Int
   createtAt      DateTime  @default(now())
-  seller         Seller?   @relation(fields: [sellerId], references: [id])
   sellerId       Int?
   item           Json?
-  provider       Provider? @relation(fields: [providerId], references: [id])
   providerId     Int?
   activeBy       Json?
+  companyPrice   Float?
+  provider       Provider? @relation(fields: [providerId], references: [id])
+  seller         Seller?   @relation(fields: [sellerId], references: [id])
 }
 
 model Card {
@@ -87,10 +81,10 @@ model Card {
   price        Float
   companyPrice Float
   providerId   Int?
-  cardType     CardType  @relation(fields: [cardTypeId], references: [id])
   cardTypeId   Int
-  provider     Provider? @relation(fields: [providerId], references: [id])
   createtAt    DateTime  @default(now())
+  cardType     CardType  @relation(fields: [cardTypeId], references: [id])
+  provider     Provider? @relation(fields: [providerId], references: [id])
 }
 
 model CardType {
@@ -98,9 +92,9 @@ model CardType {
   image         String
   name          String
   companyCardID Int
-  cards         Card[]
   createtAt     DateTime @default(now())
   active        Boolean  @default(true)
+  cards         Card[]
 }
 
 enum AdminType {
