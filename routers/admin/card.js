@@ -21,13 +21,13 @@ router.post("/", adminAuth, async (req, res) => {
 // Read all Cards
 router.get("/", dashboardAuth, async (req, res) => {
   try {
-    const { type, id } = req?.user;
+    const { type, providerId } = req?.user;
     const isProvider = type === "PROVIDER";
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip | 0);
     const where = isProvider
       ? {
-          providerId: parseInt(id),
+          providerId: parseInt(providerId),
         }
       : {};
 
