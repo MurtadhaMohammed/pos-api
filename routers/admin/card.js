@@ -21,13 +21,13 @@ router.post("/", adminAuth, async (req, res) => {
 // Read all Cards
 router.get("/", dashboardAuth, async (req, res) => {
   try {
-    const { type, id } = req?.user;
+    const { type, providerId } = req?.user;
     const isProvider = type === "PROVIDER";
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip | 0);
     const where = isProvider
       ? {
-          providerId: parseInt(id),
+          providerId: parseInt(providerId),
         }
       : {};
 
@@ -40,6 +40,9 @@ router.get("/", dashboardAuth, async (req, res) => {
       },
       take,
       skip,
+      orderBy: {
+        createtAt: "desc",
+      },
     });
     res.json({ data: cards, total });
   } catch (error) {
@@ -72,13 +75,17 @@ router.get("/:providerId/:cardTypeId", async (req, res) => {
 });
 
 // Update Card by ID
-router.put("/:id", adminAuth, async (req, res) => {
+router.put("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
   const { price, providerId, cardTypeId, companyPrice } = req.body;
+  const { type } = req?.user;
+  const isProvider = type === "PROVIDER";
   try {
     const card = await prisma.card.update({
       where: { id: Number(id) },
-      data: { price, providerId, cardTypeId, companyPrice },
+      data: isProvider
+        ? { price }
+        : { price, providerId, cardTypeId, companyPrice },
     });
     res.json(card);
   } catch (error) {
@@ -168,8 +175,6 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
     });
   }
 });
-
-
 
 router.post("/purchase", dashboardAuth, async (req, res) => {
   const { hold_id, sellerId, providerCardID, providerId } = req.body;
