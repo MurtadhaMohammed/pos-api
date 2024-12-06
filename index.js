@@ -4,6 +4,7 @@ const app = express();
 const port = 3000;
 const adminRouter = require("./routers/admin/admin");
 const providerRouter = require("./routers/admin/provider");
+const providerWallet = require("./routers/admin/providerWallet");
 const sellerRouter = require("./routers/admin/seller");
 const walletRouter = require("./routers/admin/wallet");
 const paymentRouter = require("./routers/admin/payment");
@@ -23,6 +24,7 @@ app.get("/api", (req, res) => {
 //Dashboard APIs
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/providers", providerRouter);
+app.use("/api/admin/provider-wallet", providerWallet);
 app.use("/api/admin/wallets", walletRouter);
 app.use("/api/admin/payments", paymentRouter);
 app.use("/api/admin/cards", cardRouter);

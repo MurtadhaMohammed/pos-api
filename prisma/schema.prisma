@@ -24,11 +24,23 @@ model Provider {
   address   String?
   adminId   Int?      @unique
   createtAt DateTime  @default(now())
+  walletAmount Float @default(0)
+  active    Boolean   @default(true)
   cards     Card[]
   payments  Payment[]
   admin     Admin?    @relation(fields: [adminId], references: [id])
   sellers   Seller[]
   wallets   Wallet[]
+  providerWallet ProviderWallet[]
+}
+
+model ProviderWallet {
+  id         Int       @id @default(autoincrement())
+  amount     Float     @default(0)
+  date       DateTime  @default(now())
+  createtAt  DateTime  @default(now())
+  providerId Int
+  provider   Provider @relation(fields: [providerId], references: [id])
 }
 
 model Seller {
@@ -82,6 +94,7 @@ model Card {
   companyPrice Float
   providerId   Int?
   cardTypeId   Int
+  active       Boolean   @default(true)
   createtAt    DateTime  @default(now())
   cardType     CardType  @relation(fields: [cardTypeId], references: [id])
   provider     Provider? @relation(fields: [providerId], references: [id])

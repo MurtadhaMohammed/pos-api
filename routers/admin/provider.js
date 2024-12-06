@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
 const adminAuth = require("../../middleware/adminAuth");
+const dashboardAuth = require("../../middleware/dashboardAuth");
 const router = express.Router();
 
 // insert Provider
@@ -87,5 +88,80 @@ router.put("/:id", adminAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+router.put("/active/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+
+  try{
+    const provider = await prisma.provider.findUnique({
+      where: { id: parseInt(id) },
+    })
+
+    if (!provider) {
+      return res.status(404).json({ error: "Provider not found" });
+    }
+
+    const updatedProvider = await prisma.provider.update({
+      where: { id: parseInt(id) },
+      data: {
+        active: !provider.active,
+      }
+    })
+
+    res.json(updatedProvider)
+  }catch(error){
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/reset-password/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  console.log(id , newPassword);
+
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const provider = await prisma.provider.findUnique({
+      where: { id: parseInt(id)},
+    });
+
+    if (!provider) {
+      return res.status(404).json({ error: "Provider not found" });
+    }
+
+    const providerAdmin = provider.adminId;
+
+    const updatedAdmin = await prisma.admin.update({
+      where: {id: parseInt(providerAdmin)},
+      data: { password: hashedPassword },
+    });
+    console.log(updatedAdmin)
+
+    res.json({
+      message: "Password updated successfully",
+      provider: updatedAdmin,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ error: "Error updating password" + error.message });
+  }
+});
+
+// so the provider can see his data in about section
+router.get("/about/:id", dashboardAuth, async (req, res) => {
+
+  const providerId = req.params.id;
+  try {
+    const provider = await prisma.provider.findUnique({
+      where: { id: parseInt(providerId) },
+    });
+    res.json(provider);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+
+});
+
 
 module.exports = router;
