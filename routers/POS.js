@@ -260,12 +260,12 @@ router.post("/purchase", sellerAuth, async (req, res) => {
     );
 
     let data = await response.json();
-    if (response.status === 200) {
-      data = data[0];
-    }
+    // if (response.status === 200) {
+    //   data = data[0];
+    // }
 
     let payment;
-    if (!data.error) {
+    if (response.status === 200 && !data[0].error) {
       const card = await prisma.card.findUnique({
         where: {
           id: parseInt(providerCardID),
@@ -280,10 +280,10 @@ router.post("/purchase", sellerAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
-          companyCardID: data?.id,
+          companyCardID: data[0]?.id,
           price: card?.price,
           companyPrice: card?.companyPrice,
-          qty: 1,
+          qty: data?.length,
           providerCardID: parseInt(providerCardID),
           item: data,
         },
@@ -294,8 +294,9 @@ router.post("/purchase", sellerAuth, async (req, res) => {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - card?.companyPrice,
-          paymentAmount: seller.paymentAmount + card?.companyPrice,
+          walletAmount: seller.walletAmount - card?.companyPrice * data?.length,
+          paymentAmount:
+            seller.paymentAmount + card?.companyPrice * data?.length,
         },
       });
     }
