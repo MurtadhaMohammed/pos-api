@@ -302,7 +302,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
     }
 
     // Send back the response from the external API
-    res.status(response.status).json({ ...data, paymentId: payment?.id });
+    res.status(response.status).json({ ...data[0], paymentId: payment?.id });
   } catch (error) {
     // Handle errors appropriately
     console.error("Error making request to external API:", error.message);
