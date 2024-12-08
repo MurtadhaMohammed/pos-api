@@ -144,7 +144,7 @@ router.get("/history", sellerAuth, async (req, res) => {
 });
 
 router.post("/cardHolder", sellerAuth, async (req, res) => {
-  const { companyCardTypeId } = req.body;
+  const { companyCardTypeId, quantity = 1 } = req.body;
   if (!companyCardTypeId) {
     return res.status(400).json({ message: "companyCardTypeId is required" });
   }
@@ -183,6 +183,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     // Make a request to the external API
     const formdata = new FormData();
     formdata.append("companyCardTypeId", companyCardTypeId);
+    formdata.append("quantity", quantity);
 
     const response = await fetch(
       "https://client.nojoomalrabiaa.com/api/client/hold-card",
@@ -200,8 +201,8 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       data = {
         ...data[0],
         walletAmount: seller.walletAmount,
-        price: card?.price,
-        companyPrice: card?.companyPrice,
+        price: card?.price * parseInt(quantity),
+        companyPrice: card?.companyPrice * parseInt(quantity),
       };
     }
     res.status(response.status).json(data);
