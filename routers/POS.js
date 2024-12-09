@@ -411,65 +411,44 @@ router.post("/refresh", sellerAuth, async (req, res) => {
 
 router.get("/invoice/:id", async (req, res) => {
   let id = req.params.id || 0;
-  // const { sellerId } = req?.user;
   const width = 384;
-  const height = 710;
   const padding = 0;
 
   try {
     const payment = await prisma.payment.findUnique({
       where: {
         id: parseInt(id),
-        // sellerId: parseInt(sellerId),
       },
       include: {
         seller: true,
       },
     });
 
-    // let data = payments?.map((el) => {
-    //   let item = Array.isArray(el?.item) ? el?.item[0] : el?.item;
-    //   let code = Array.isArray(el?.item)
-    //     ? el?.item.map((d) => d.code).join(" ,")
-    //     : el?.item?.code;
-    //   return {
-    //     id: el?.id,
-    //     price: el?.price,
-    //     qty: el?.qty,
-    //     companyPrice: el?.companyPrice || el?.price || 0,
-    //     image: item?.details?.cover,
-    //     providerId: el?.providerId,
-    //     companyCardID: el?.companyCardID,
-    //     createdAt: el?.createtAt,
-    //     code,
-    //     name: item?.details?.title,
-    //     activeState: el.activeBy?.sellerId ? "active" : "pending",
-    //   };
-    // });
+    let items = Array.isArray(payment?.item) ? payment?.item : [payment?.item];
 
-    let item = Array.isArray(payment?.item) ? payment?.item[0] : payment?.item;
     const logoPath = "assets/logo2.png"; // Path to logo image
     const companyName = payment?.seller?.name;
     const invoiceNumber = `#${payment?.id}`;
-    const cardName = item?.details?.title;
-    const cardCode = item?.code;
-    const price = payment?.price;
+    const cardName = items[0]?.details?.title;
+    const codes = items?.map((item) => item?.code);
+    const price = payment?.price * payment?.qty;
     const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
     const phone = "07855551040, 07755551040";
 
-    //const lines = msg.match(/.{1,29}/g); // Adjust 40 to your preferred line length
-    // Create Arabic text as an SVG with matching width
+    const codeStartY = 374; // Starting Y position for the codes
+    const codeLineHeight = 60; // Vertical spacing between each code
+
     const textSvg = Buffer.from(`
-       <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+       <svg width="${width}" height="${codeStartY + codes.length * codeLineHeight + 280}" xmlns="http://www.w3.org/2000/svg">
         <style>
             @import url('https://fonts.cdnfonts.com/css/somar-sans');
-
+    
             *{
               font-family: 'Somar Sans', sans-serif;
               font-size: 28px;
               font-weight: bold;
             }
-
+    
             .code{
               font-size: 46px;
               font-weight: bold;
@@ -480,32 +459,55 @@ router.get("/invoice/:id", async (req, res) => {
               direction: rtl;
             }
             .msg{
-          font-family: 'Somar Sans', sans-serif;
+              font-family: 'Somar Sans', sans-serif;
               font-size: 22px;
               font-weight: bold;
             }
         </style>
         <line x1="4" y1="150" x2="380" y2="150" stroke="black" stroke-width="1" />
-        <text x="50%" y="200" class="compnay" text-anchor="middle">  ${invoiceNumber} :رقم الفاتورة</text>
+        <text x="50%" y="200" class="compnay" text-anchor="middle">${invoiceNumber} :رقم الفاتورة</text>
         <text x="50%" y="240" class="compnay" text-anchor="middle">${companyName}</text>
         <line x1="4" y1="280" x2="380" y2="280" stroke="black" stroke-width="1" />
         <text x="50%" y="320" class="compnay" text-anchor="middle">${cardName}</text>
-        <text x="50%" y="374" class="code" text-anchor="middle">${cardCode}</text>
-        <text x="50%" y="430" class="price" text-anchor="middle">السعر: ${Number(
-          price
-        ).toLocaleString("en")} د.ع </text>
-        <line x1="4" y1="460" x2="380" y2="460" stroke="black" stroke-width="1" />
-        <text x="50%" y="500" class="compnay" text-anchor="middle">${date}</text>
+    
+        ${codes
+          ?.map((code, i) => {
+            const currentY = codeStartY + i * codeLineHeight; // Calculate Y position dynamically
+            return `<text x="50%" y="${currentY}" class="code" text-anchor="middle">${code}</text>`;
+          })
+          .join("")}
+    
+        <text x="50%" y="${
+          codeStartY + codes.length * codeLineHeight + 10
+        }" class="price" text-anchor="middle">السعر: ${Number(
+      price
+    ).toLocaleString("en")} د.ع</text>
+        <line x1="4" y1="${
+          codeStartY + codes.length * codeLineHeight + 40
+        }" x2="380" y2="${
+      codeStartY + codes.length * codeLineHeight + 40
+    }" stroke="black" stroke-width="1" />
+        <text x="50%" y="${
+          codeStartY + codes.length * codeLineHeight + 80
+        }" class="compnay" text-anchor="middle">${date}</text>
         
-        <rect x="10" y="540" width="360" height="140" stroke="black" fill="none" stroke-width="2"/>
-        <text x="50%" y="580" class="compnay" text-anchor="middle">اذا كانت لديك اي مشكلة</text>
-        <text x="50%" y="615" class="msg" text-anchor="middle">تواصل معنا عبر الارقام التالية</text>
-        <text x="50%" y="650" class="msg" text-anchor="middle">${phone}</text>
+        <rect x="10" y="${
+          codeStartY + codes.length * codeLineHeight + 120
+        }" width="360" height="140" stroke="black" fill="none" stroke-width="2"/>
+        <text x="50%" y="${
+          codeStartY + codes.length * codeLineHeight + 160
+        }" class="compnay" text-anchor="middle">اذا كانت لديك اي مشكلة</text>
+        <text x="50%" y="${
+          codeStartY + codes.length * codeLineHeight + 195
+        }" class="msg" text-anchor="middle">تواصل معنا عبر الارقام التالية</text>
+        <text x="50%" y="${
+          codeStartY + codes.length * codeLineHeight + 230
+        }" class="msg" text-anchor="middle">${phone}</text>
       </svg>
     `);
 
     const totalWidth = width + 2 * padding;
-    const totalHeight = height + padding + padding;
+    const totalHeight = (codeStartY + codes.length * codeLineHeight + 280) + padding + padding;
 
     sharp({
       create: {
