@@ -146,7 +146,8 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
     formdata.append("companyCardTypeId", companyCardTypeId);
 
     const response = await fetch(
-      "https://api.nojoomalrabiaa.com/v1/companyDashboard/cardHolder",
+      "https://client.nojoomalrabiaa.com/api/client/hold-card",
+      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/cardHolder",
       {
         method: "POST",
         headers: {
@@ -207,7 +208,8 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     formdata.append("hold_id", hold_id);
 
     const response = await fetch(
-      "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
+      "https://client.nojoomalrabiaa.com/api/client/purchase",
+      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
       {
         method: "POST",
         headers: {
