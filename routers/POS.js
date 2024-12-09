@@ -108,18 +108,25 @@ router.get("/history", sellerAuth, async (req, res) => {
     });
 
     // Map and format the response
-    let data = payments?.map((el) => ({
-      id: el?.id,
-      price: el?.price,
-      companyPrice: el?.companyPrice || el?.price || 0,
-      image: el?.item?.details?.cover,
-      providerId: el?.providerId,
-      companyCardID: el?.companyCardID,
-      createdAt: el?.createtAt,
-      code: el?.item?.code,
-      name: el?.item?.details?.title,
-      activeState: el.activeBy?.sellerId ? "active" : "pending",
-    }));
+    let data = payments?.map((el) => {
+      let item = Array.isArray(el?.item) ? el?.item[0] : el?.item;
+      let code = Array.isArray(el?.item)
+        ? el?.item.map((d) => d.code).join(" ,")
+        : el?.item?.code;
+      return {
+        id: el?.id,
+        price: el?.price,
+        qty: el?.qty,
+        companyPrice: el?.companyPrice || el?.price || 0,
+        image: item?.details?.cover,
+        providerId: el?.providerId,
+        companyCardID: el?.companyCardID,
+        createdAt: el?.createtAt,
+        code,
+        name: item?.details?.title,
+        activeState: el.activeBy?.sellerId ? "active" : "pending",
+      };
+    });
 
     // Get total count of payments for the seller
     const totalPayments = await prisma.payment.count({
@@ -420,11 +427,32 @@ router.get("/invoice/:id", async (req, res) => {
       },
     });
 
+    // let data = payments?.map((el) => {
+    //   let item = Array.isArray(el?.item) ? el?.item[0] : el?.item;
+    //   let code = Array.isArray(el?.item)
+    //     ? el?.item.map((d) => d.code).join(" ,")
+    //     : el?.item?.code;
+    //   return {
+    //     id: el?.id,
+    //     price: el?.price,
+    //     qty: el?.qty,
+    //     companyPrice: el?.companyPrice || el?.price || 0,
+    //     image: item?.details?.cover,
+    //     providerId: el?.providerId,
+    //     companyCardID: el?.companyCardID,
+    //     createdAt: el?.createtAt,
+    //     code,
+    //     name: item?.details?.title,
+    //     activeState: el.activeBy?.sellerId ? "active" : "pending",
+    //   };
+    // });
+
+    let item = Array.isArray(payment?.item) ? payment?.item[0] : payment?.item;
     const logoPath = "assets/logo2.png"; // Path to logo image
     const companyName = payment?.seller?.name;
     const invoiceNumber = `#${payment?.id}`;
-    const cardName = payment?.item?.details?.title;
-    const cardCode = payment?.item?.code;
+    const cardName = item?.details?.title;
+    const cardCode = item?.code;
     const price = payment?.price;
     const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
     const phone = "07855551040, 07755551040";
