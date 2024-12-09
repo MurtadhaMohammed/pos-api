@@ -320,6 +320,130 @@ router.post("/purchase", sellerAuth, async (req, res) => {
   }
 });
 
+router.post("/v2/purchase", sellerAuth, async (req, res) => {
+  const { hold_id, sellerId, providerCardID, providerId } = req.body;
+  if (!hold_id) {
+    return res.status(400).json({ message: "hold_id is required" });
+  }
+
+  try {
+    const card = await prisma.card.findUnique({
+      where: {
+        id: Number(providerCardID),
+      },
+    });
+
+    const seller = await prisma.seller.findUnique({
+      where: {
+        id: Number(req?.user?.id),
+      },
+    });
+
+    if (seller?.walletAmount < card?.companyPrice) {
+      res.status(500).json({
+        walletAmount: seller.walletAmount,
+        error: "Your wallet is not enough!",
+      });
+    }
+
+    // Make a request to the external API
+    const formdata = new FormData();
+    formdata.append("hold_id", hold_id);
+
+    const response = await fetch(
+      "https://client.nojoomalrabiaa.com/api/client/purchase",
+      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+        },
+        body: formdata,
+      }
+    );
+
+    let data = await response.json();
+    // if (response.status === 200) {
+    //   data = data[0];
+    // }
+
+    let payment;
+    if (response.status === 200 && !data[0].error) {
+      const card = await prisma.card.findUnique({
+        where: {
+          id: parseInt(providerCardID),
+        },
+      });
+
+      payment = await prisma.payment.create({
+        data: {
+          provider: {
+            connect: { id: parseInt(providerId) },
+          },
+          seller: {
+            connect: { id: parseInt(sellerId) },
+          },
+          companyCardID: data[0]?.id,
+          price: card?.price,
+          companyPrice: card?.companyPrice,
+          qty: data?.length,
+          providerCardID: parseInt(providerCardID),
+          item: data,
+        },
+      });
+
+      await prisma.seller.update({
+        where: {
+          id: parseInt(sellerId),
+        },
+        data: {
+          walletAmount: seller.walletAmount - card?.companyPrice * data?.length,
+          paymentAmount:
+            seller.paymentAmount + card?.companyPrice * data?.length,
+        },
+      });
+
+      // Map and format the response
+
+      // "id": jsonResponse["id"],
+      // "paymentId": jsonResponse["paymentId"],
+      // "code": jsonResponse["code"],
+      // "createdAt": jsonResponse["createdAt"],
+
+      let item = Array.isArray(payment?.item)
+        ? payment?.item[0]
+        : payment?.item;
+      let code = Array.isArray(payment?.item)
+        ? payment?.item.map((d) => d.code).join(" ,")
+        : payment?.item?.code;
+
+      resp = {
+        id: item?.id,
+        paymentId: payment?.id,
+        price: payment?.price,
+        qty: payment?.qty,
+        createdAt: payment?.createtAt,
+        code,
+        name: item?.details?.title,
+        // activeState: payment.activeBy?.sellerId ? "active" : "pending",
+      };
+
+      res.status(200).json(resp);
+    } else {
+      res.status(response.status).json(data[0]);
+    }
+
+    // Send back the response from the external API
+  } catch (error) {
+    // Handle errors appropriately
+    console.error("Error making request to external API:", error.message);
+    res.status(500).json({
+      message: "Error making request to external API",
+      error: error.message,
+    });
+  }
+});
+
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
   const { sellerId, isHajji, name, username } = req?.user;
@@ -439,7 +563,9 @@ router.get("/invoice/:id", async (req, res) => {
     const codeLineHeight = 60; // Vertical spacing between each code
 
     const textSvg = Buffer.from(`
-       <svg width="${width}" height="${codeStartY + codes.length * codeLineHeight + 280}" xmlns="http://www.w3.org/2000/svg">
+       <svg width="${width}" height="${
+      codeStartY + codes.length * codeLineHeight + 280
+    }" xmlns="http://www.w3.org/2000/svg">
         <style>
             @import url('https://fonts.cdnfonts.com/css/somar-sans');
     
@@ -507,7 +633,8 @@ router.get("/invoice/:id", async (req, res) => {
     `);
 
     const totalWidth = width + 2 * padding;
-    const totalHeight = (codeStartY + codes.length * codeLineHeight + 280) + padding + padding;
+    const totalHeight =
+      codeStartY + codes.length * codeLineHeight + 280 + padding + padding;
 
     sharp({
       create: {
