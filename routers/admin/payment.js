@@ -258,7 +258,7 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
           id: payment.sellerId,
         },
         data: {
-          walletAmount: { increment: payment.companyPrice }, // Increment wallet amount
+          walletAmount: { increment: payment.companyPrice * payment.qty }, // Increment wallet amount
         },
       }),
       // Delete payment record

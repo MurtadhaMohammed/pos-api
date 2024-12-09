@@ -7,3 +7,4 @@ invoices
 ecosystem.config.js
 static
 static/*
+test.js

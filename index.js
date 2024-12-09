@@ -22,6 +22,7 @@ app.get("/api", (req, res) => {
 });
 
 //Dashboard APIs
+app.use("/api/test", adminRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/providers", providerRouter);
 app.use("/api/admin/provider-wallet", providerWallet);
