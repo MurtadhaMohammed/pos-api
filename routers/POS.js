@@ -168,6 +168,12 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       },
     });
 
+    if (!card) {
+      return res.status(500).json({
+        error: "No card found!",
+      });
+    }
+
     const seller = await prisma.seller.findUnique({
       where: {
         id: parseInt(req?.user?.id),
@@ -321,7 +327,10 @@ router.post("/purchase", sellerAuth, async (req, res) => {
 });
 
 router.post("/v2/purchase", sellerAuth, async (req, res) => {
-  const { hold_id, sellerId, providerCardID, providerId } = req.body;
+  const { hold_id, providerCardID, providerId } = req.body;
+
+  const sellerId = req?.user?.id;
+
   if (!hold_id) {
     return res.status(400).json({ message: "hold_id is required" });
   }
