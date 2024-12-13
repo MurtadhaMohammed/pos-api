@@ -344,7 +344,7 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
 
     const seller = await prisma.seller.findUnique({
       where: {
-        id: Number(req?.user?.id),
+        id: Number(sellerId),
       },
     });
 
@@ -406,9 +406,12 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - card?.companyPrice * data?.length,
-          paymentAmount:
-            seller.paymentAmount + card?.companyPrice * data?.length,
+          walletAmount: {
+            decrement: card?.companyPrice * data?.length,
+          },
+          paymentAmount: {
+            increment: card?.companyPrice * data?.length,
+          },
         },
       });
 
