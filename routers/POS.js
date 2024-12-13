@@ -401,7 +401,7 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
         },
       });
 
-      await prisma.seller.update({
+      const updatedSeller = await prisma.seller.update({
         where: {
           id: parseInt(sellerId),
         },
@@ -435,6 +435,7 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
         price: payment?.price,
         qty: payment?.qty,
         createdAt: payment?.createtAt,
+        walletAmount: updatedSeller?.walletAmount,
         code,
         name: item?.details?.title,
         // activeState: payment.activeBy?.sellerId ? "active" : "pending",
