@@ -8,9 +8,19 @@ const router = express.Router();
 router.post("/", dashboardAuth, async (req, res) => {
   const { name, username, password, address, phone, providerId } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-
   try {
+    const existingSeller = await prisma.seller.findUnique({
+      where: {
+        username: username,
+      },
+    });
+
+    if (existingSeller) {
+      return res.status(400).json({error: "Username already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const seller = await prisma.seller.create({
       data: {
         name,
@@ -23,7 +33,8 @@ router.post("/", dashboardAuth, async (req, res) => {
     });
     res.status(201).json(seller);
   } catch (error) {
-    res.status(400).json({ error: "Username already exists" });
+    console.error("Error creating seller:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
