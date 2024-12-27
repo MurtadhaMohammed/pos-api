@@ -42,7 +42,7 @@ router.post("/login", async (req, res) => {
   try {
     const admin = await prisma.admin.findUnique({
       where: { username },
-      include: { provider: true },
+      include: { provider: true, agent: true },
     });
     if (admin && (await bcrypt.compare(password, admin.password))) {
       const token = jwt.sign(
@@ -51,11 +51,11 @@ router.post("/login", async (req, res) => {
           username: admin.username,
           type: admin.type,
           providerId: admin?.provider?.id,
+          agentId: admin?.agent?.id,
         },
         JWT_SECRET,
         { expiresIn: "1h" }
       );
-
       res.json({ message: "Login successful", token });
     } else {
       res.status(401).json({ error: "Invalid username or password" });

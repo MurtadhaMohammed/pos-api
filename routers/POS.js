@@ -62,6 +62,12 @@ router.get("/user", sellerAuth, async (req, res) => {
 // Read Cards
 router.get("/cards", sellerAuth, async (req, res) => {
   try {
+    const seller = await prisma.seller.findUnique({
+      where: {
+        id: parseInt(req.user.id),
+      },
+    });
+
     const cards = await prisma.card.findMany({
       where: {
         providerId: Number(req?.user?.providerId),
@@ -73,10 +79,12 @@ router.get("/cards", sellerAuth, async (req, res) => {
         cardType: true,
       },
     });
+
     let data = cards?.map((el) => ({
       id: el?.id,
-      price: el?.price,
-      companyPrice: el?.companyPrice,
+      price: (seller?.agentId ? el?.agentPrice : el?.price) || 0,
+      companyPrice:
+        (seller?.agentId ? el?.providerPrice : el?.companyPrice) || 0,
       image: el?.cardType?.image,
       name: el?.cardType?.name,
       companyCardID: el?.cardType?.companyCardID,
@@ -186,7 +194,11 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       });
     }
 
-    if (seller.walletAmount < card.price) {
+    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
+    const companyPrice =
+      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+
+    if (seller.walletAmount < cardPrice) {
       return res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -214,8 +226,8 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       data = {
         ...data[0],
         walletAmount: seller.walletAmount,
-        price: card?.price,
-        companyPrice: card?.companyPrice,
+        price: cardPrice,
+        companyPrice,
       };
     }
     res.status(response.status).json(data);
@@ -249,7 +261,11 @@ router.post("/purchase", sellerAuth, async (req, res) => {
       },
     });
 
-    if (seller?.walletAmount < card?.companyPrice) {
+    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
+    const companyPrice =
+      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+
+    if (seller?.walletAmount < companyPrice) {
       res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -294,8 +310,8 @@ router.post("/purchase", sellerAuth, async (req, res) => {
             connect: { id: parseInt(sellerId) },
           },
           companyCardID: data[0]?.id,
-          price: card?.price,
-          companyPrice: card?.companyPrice,
+          price: cardPrice,
+          companyPrice,
           qty: data?.length,
           providerCardID: parseInt(providerCardID),
           item: data,
@@ -307,9 +323,8 @@ router.post("/purchase", sellerAuth, async (req, res) => {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - card?.companyPrice * data?.length,
-          paymentAmount:
-            seller.paymentAmount + card?.companyPrice * data?.length,
+          walletAmount: seller.walletAmount - companyPrice * data?.length,
+          paymentAmount: seller.paymentAmount + companyPrice * data?.length,
         },
       });
     }
@@ -348,7 +363,11 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
       },
     });
 
-    if (seller?.walletAmount < card?.companyPrice) {
+    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
+    const companyPrice =
+      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+
+    if (seller?.walletAmount < companyPrice) {
       res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -378,12 +397,6 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
 
     let payment;
     if (response.status === 200 && !data[0].error) {
-      const card = await prisma.card.findUnique({
-        where: {
-          id: parseInt(providerCardID),
-        },
-      });
-
       payment = await prisma.payment.create({
         data: {
           provider: {
@@ -392,9 +405,10 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
+          agentId: seller?.agentId || null,
           companyCardID: data[0]?.id,
-          price: card?.price,
-          companyPrice: card?.companyPrice,
+          price: cardPrice,
+          companyPrice,
           qty: data?.length,
           providerCardID: parseInt(providerCardID),
           item: data,
@@ -407,10 +421,10 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
         },
         data: {
           walletAmount: {
-            decrement: card?.companyPrice * data?.length,
+            decrement: companyPrice * data?.length,
           },
           paymentAmount: {
-            increment: card?.companyPrice * data?.length,
+            increment: companyPrice * data?.length,
           },
         },
       });

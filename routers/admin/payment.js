@@ -102,12 +102,17 @@ router.get("/", dashboardAuth, async (req, res) => {
     const q = req.query.q || undefined; // Default to page 1 if not provided
     const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
     const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
-    const { type, id } = req?.user;
+    const { type, providerId, agentId } = req?.user;
     const isProvider = type === "PROVIDER";
+    const isAgent = type === "AGENT";
 
     const where = isProvider
       ? {
-          providerId: parseInt(id),
+          providerId: parseInt(providerId),
+        }
+      : isAgent
+      ? {
+          agentId: parseInt(agentId),
         }
       : {};
     // Calculate the number of items to skip based on the page and limit
@@ -154,6 +159,7 @@ router.get("/", dashboardAuth, async (req, res) => {
       include: {
         seller: true,
         provider: true,
+        agent: true,
       },
       skip: skip, // Skip the previous records
       take: limit, // Limit the number of records fetched
