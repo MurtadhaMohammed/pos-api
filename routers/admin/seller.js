@@ -6,7 +6,8 @@ const router = express.Router();
 
 // Register
 router.post("/", dashboardAuth, async (req, res) => {
-  const { name, username, password, address, phone, providerId } = req.body;
+  const { name, username, password, address, phone, providerId, agentId } =
+    req.body;
 
   try {
     const existingSeller = await prisma.seller.findUnique({
@@ -16,10 +17,16 @@ router.post("/", dashboardAuth, async (req, res) => {
     });
 
     if (existingSeller) {
-      return res.status(400).json({error: "Username already exists" });
+      return res.status(400).json({ error: "Username already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const agent = await prisma.agent.findUnique({
+      where: {
+        id: agentId,
+      },
+    });
 
     const seller = await prisma.seller.create({
       data: {
@@ -28,7 +35,8 @@ router.post("/", dashboardAuth, async (req, res) => {
         password: hashedPassword,
         phone,
         address,
-        providerId,
+        providerId: agentId ? agent?.providerId : providerId,
+        agentId,
       },
     });
     res.status(201).json(seller);
@@ -42,12 +50,17 @@ router.post("/", dashboardAuth, async (req, res) => {
 router.get("/", dashboardAuth, async (req, res) => {
   const take = parseInt(req.query.take || 8);
   const skip = parseInt(req.query.skip | 0);
-  const { type, providerId } = req?.user;
+  const { type, providerId, agentId } = req?.user;
   const isProvider = type === "PROVIDER";
+  const isAgent = type === "AGENT";
 
   const where = isProvider
     ? {
         providerId: parseInt(providerId),
+      }
+    : isAgent
+    ? {
+        agentId: parseInt(agentId),
       }
     : {};
 
@@ -57,9 +70,13 @@ router.get("/", dashboardAuth, async (req, res) => {
     include: {
       provider: true,
       wallet: true,
+      agent: true,
     },
     take,
     skip,
+    orderBy: {
+      createtAt: "desc",
+    },
   });
   res.json({ data: sellers, total });
   // res.json(sellers);
@@ -68,11 +85,11 @@ router.get("/", dashboardAuth, async (req, res) => {
 // Update seller
 router.put("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, username, address, phone, providerId } = req.body;
+  const { name, username, address, phone, providerId, agentId } = req.body;
 
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
-    data: { name, username, address, phone, providerId },
+    data: { name, username, address, phone, providerId, agentId },
   });
 
   res.json(seller);

@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
-const providerAuth = (req, res, next) => {
+const agentAuth = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
   if (token == null) return res.sendStatus(401);
@@ -14,7 +14,11 @@ const providerAuth = (req, res, next) => {
       } else {
         return res.sendStatus(403);
       }
-    } else if (user.type !== "ADMIN" && user.type !== "PROVIDER") {
+    } else if (
+      user.type !== "ADMIN" &&
+      user.type !== "PROVIDER" &&
+      user.type !== "AGENT"
+    ) {
       return res
         .status(403)
         .json({ error: "You do not have permission to perform this action" });
@@ -24,4 +28,4 @@ const providerAuth = (req, res, next) => {
   });
 };
 
-module.exports = providerAuth;
+module.exports = agentAuth;

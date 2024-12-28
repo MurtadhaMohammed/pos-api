@@ -41,27 +41,44 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 router.get("/", adminAuth, async (req, res) => {
-    try {
-      const take = parseInt(req.query.take || 10);
-      const skip = parseInt(req.query.skip || 0);
-      const total = await prisma.providerWallet.count();
-      const wallets = await prisma.providerWallet.findMany({
-        take,
-        skip,
-        orderBy: {
-          createtAt: "desc",
-        },
-        include: {
-          provider: true,
+  try {
+    const take = parseInt(req.query.take || 10);
+    const skip = parseInt(req.query.skip || 0);
+    const providerId = parseInt(req.query.providerId) || undefined;
+
+    let provider = null;
+    if (providerId) {
+      provider = await prisma.provider.findUnique({
+        where: {
+          id: providerId,
         },
       });
-  
-      res.json({ data: wallets, total });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
     }
-  });
-  
+
+    const total = await prisma.providerWallet.count({
+      where: {
+        providerId,
+      },
+    });
+    const wallets = await prisma.providerWallet.findMany({
+      where: {
+        providerId,
+      },
+      take,
+      skip,
+      orderBy: {
+        createtAt: "desc",
+      },
+      include: {
+        provider: true,
+      },
+    });
+
+    res.json({ data: wallets, total, provider });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
@@ -86,7 +103,6 @@ router.put("/:id", adminAuth, async (req, res) => {
   const { amount } = req.body;
 
   try {
-    
     const oldWallet = await prisma.providerWallet.findUnique({
       where: { id: Number(id) },
     });
@@ -105,9 +121,7 @@ router.put("/:id", adminAuth, async (req, res) => {
     });
 
     const newBalance =
-      (provider.walletAmount || 0) -
-      oldWallet.amount +
-      parseFloat(amount);
+      (provider.walletAmount || 0) - oldWallet.amount + parseFloat(amount);
 
     await prisma.provider.update({
       where: { id: oldWallet.providerId },
@@ -120,7 +134,7 @@ router.put("/:id", adminAuth, async (req, res) => {
   }
 });
 
-router.delete("/:id", adminAuth , async (req, res) => {
+router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   try {
     const wallet = await prisma.providerWallet.findUnique({

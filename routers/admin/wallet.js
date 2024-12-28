@@ -5,14 +5,16 @@ const router = express.Router();
 
 // Create Wallet
 router.post("/", dashboardAuth, async (req, res) => {
-  const { amount, sellerId, date } = req.body;
+  const { amount, sellerId, date, from } = req.body;
   try {
+    if (!from) return res.status(400).json({ error: "Data Error!" });
     const seller = await prisma.seller.findUnique({
       where: {
         id: parseInt(sellerId),
       },
       include: {
         provider: true,
+        agent: true,
       },
     });
 
@@ -21,13 +23,37 @@ router.post("/", dashboardAuth, async (req, res) => {
     }
 
     const provider = seller.provider;
+    const agent = seller.agent;
 
     if (!provider) {
       return res.status(404).json({ error: "Provider not found" });
     }
 
-    if (provider.walletAmount < parseInt(amount)) {
-      return res.status(400).json({ error: "Provider has insufficient balance" });
+    if (
+      req.user?.type !== "ADMIN" &&
+      from === "PROVIDER" &&
+      parseInt(req.user.providerId) !== seller?.providerId
+    ) {
+      return res.status(400).json({ error: "لاتصير لوتي!." });
+    }
+
+    if (
+      req.user?.type !== "ADMIN" &&
+      req.user?.type !== "PROVIDER" &&
+      from === "AGENT" &&
+      parseInt(req.user.agentId) !== seller?.agentId
+    ) {
+      return res.status(400).json({ error: "لاتصير لوتي!." });
+    }
+
+    if (from === "PROVIDER" && provider.walletAmount < parseInt(amount)) {
+      return res
+        .status(400)
+        .json({ error: "Provider has insufficient balance" });
+    }
+
+    if (from === "AGENT" && agent.walletAmount < parseInt(amount)) {
+      return res.status(400).json({ error: "Agent has insufficient balance" });
     }
 
     const wallet = await prisma.wallet.create({
@@ -36,26 +62,43 @@ router.post("/", dashboardAuth, async (req, res) => {
         sellerId: parseInt(sellerId),
         date: date || new Date(),
         providerId: provider.id,
+        agentId: agent?.id,
+        from,
       },
     });
 
-    await prisma.provider.update({
-      where: {
-        id: provider.id,
-      },
-      data: {
-        walletAmount: provider.walletAmount - parseInt(amount),
-      },
+    await prisma.$transaction(async (prisma) => {
+      if (from === "PROVIDER") {
+        await prisma.provider.update({
+          where: {
+            id: provider.id,
+          },
+          data: {
+            walletAmount: provider.walletAmount - parseInt(amount),
+          },
+        });
+      }
+      if (from === "AGENT") {
+        await prisma.agent.update({
+          where: {
+            id: agent.id,
+          },
+          data: {
+            walletAmount: agent.walletAmount - parseInt(amount),
+          },
+        });
+      }
+
+      await prisma.seller.update({
+        where: {
+          id: parseInt(sellerId),
+        },
+        data: {
+          walletAmount: seller.walletAmount + parseInt(amount),
+        },
+      });
     });
 
-    await prisma.seller.update({
-      where: {
-        id: parseInt(sellerId),
-      },
-      data: {
-        walletAmount: seller.walletAmount + parseInt(amount),
-      },
-    });
     res.json(wallet);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -66,15 +109,34 @@ router.post("/", dashboardAuth, async (req, res) => {
 router.get("/", dashboardAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
-    const skip = parseInt(req.query.skip | 0);
-    const { type, providerId } = req?.user;
+    const skip = parseInt(req.query.skip || 0);
+    const sellerId = parseInt(req.query.sellerId) || undefined;
+    const { type, providerId, agentId } = req?.user;
     const isProvider = type === "PROVIDER";
+    const isAgent = type === "AGENT";
 
     const where = isProvider
       ? {
           providerId: parseInt(providerId),
+          sellerId,
         }
-      : {};
+      : isAgent
+      ? {
+          agentId: parseInt(agentId),
+          sellerId,
+        }
+      : {
+          sellerId,
+        };
+
+    let seller = null;
+    if (sellerId) {
+      seller = await prisma.seller.findUnique({
+        where: {
+          id: sellerId,
+        },
+      });
+    }
     const total = await prisma.wallet.count({ where });
     const wallets = await prisma.wallet.findMany({
       where,
@@ -91,7 +153,7 @@ router.get("/", dashboardAuth, async (req, res) => {
         createtAt: "desc",
       },
     });
-    res.json({ data: wallets, total });
+    res.json({ data: wallets, total, seller });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -110,42 +172,6 @@ router.get("/:id", dashboardAuth, async (req, res) => {
   }
 });
 
-// Update Wallet by ID
-router.put("/:id", dashboardAuth, async (req, res) => {
-  const { id } = req.params;
-  const { amount, sellerId } = req.body;
-  try {
-    const oldWallet = await prisma.wallet.findUnique({
-      where: { id: Number(id) },
-    });
-
-    const wallet = await prisma.wallet.update({
-      where: { id: Number(id) },
-      data: { amount, sellerId },
-    });
-
-    const seller = await prisma.seller.findUnique({
-      where: {
-        id: parseInt(sellerId),
-      },
-    });
-
-    let newWalletAmount = seller.walletAmount - oldWallet.amount;
-
-    await prisma.seller.update({
-      where: {
-        id: parseInt(sellerId),
-      },
-      data: {
-        walletAmount: newWalletAmount + parseInt(amount),
-      },
-    });
-    res.json(wallet);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Delete Wallet by ID
 router.delete("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
@@ -153,30 +179,91 @@ router.delete("/:id", dashboardAuth, async (req, res) => {
   try {
     const wallet = await prisma.wallet.findUnique({
       where: { id: Number(id) },
+      include: {
+        Provider: true,
+        Agent: true,
+        seller: true,
+      },
     });
 
     if (!wallet) {
       return res.status(404).json({ error: "Wallet not found" });
     }
 
-    const provider = await prisma.provider.findUnique({
-      where: { id: wallet.providerId },
-    });
+    const provider = wallet.Provider;
+    const agent = wallet.Agent;
+    const from = wallet.from;
+    const amount = wallet.amount;
+    const sellerId = wallet.sellerId;
+    const seller = wallet.seller;
 
     if (!provider) {
       return res.status(404).json({ error: "Provider not found" });
     }
 
-    await prisma.provider.update({
-      where: { id: wallet.providerId },
-      data: {
-        walletAmount: provider.walletAmount + wallet.amount,
-      },
+    if (
+      req.user?.type !== "ADMIN" &&
+      from === "PROVIDER" &&
+      parseInt(req.user.providerId) !== seller?.providerId
+    ) {
+      return res.status(400).json({ error: "لاتصير لوتي!." });
+    }
+
+    if (
+      req.user?.type !== "ADMIN" &&
+      req.user?.type !== "PROVIDER" &&
+      from === "AGENT" &&
+      parseInt(req.user.agentId) !== seller?.agentId
+    ) {
+      return res.status(400).json({ error: "لاتصير لوتي!." });
+    }
+
+    if (seller?.walletAmount < amount) {
+      return res
+        .status(500)
+        .json({ error: "You alresy spent your wallet amount!." });
+    }
+
+    await prisma.$transaction(async (prisma) => {
+      if (from === "PROVIDER") {
+        await prisma.provider.update({
+          where: {
+            id: provider.id,
+          },
+          data: {
+            walletAmount: {
+              increment: parseInt(amount),
+            },
+          },
+        });
+      }
+      if (from === "AGENT") {
+        await prisma.agent.update({
+          where: {
+            id: agent.id,
+          },
+          data: {
+            walletAmount: {
+              increment: parseInt(amount),
+            },
+          },
+        });
+      }
+      await prisma.seller.update({
+        where: {
+          id: parseInt(sellerId),
+        },
+        data: {
+          walletAmount: {
+            decrement: parseInt(amount),
+          },
+        },
+      });
+
+      await prisma.wallet.delete({ where: { id: Number(id) } });
     });
 
-    await prisma.wallet.delete({ where: { id: Number(id) } });
-
-    res.json({ message: "Wallet deleted and amount returned to provider" });
+    res.json({ message: "Wallet deleted and amount returned." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -29,7 +29,18 @@ router.get("/", dashboardAuth, async (req, res) => {
       ? {
           providerId: parseInt(providerId),
         }
-      : {};
+      : {
+          providerId: parseInt(req.query.providerId) || undefined,
+        };
+
+    let provider = null;
+    if (req.query.providerId) {
+      provider = await prisma.provider.findUnique({
+        where: {
+          id: parseInt(req.query.providerId),
+        },
+      });
+    }
 
     const total = await prisma.card.count({ where });
     const cards = await prisma.card.findMany({
@@ -44,7 +55,7 @@ router.get("/", dashboardAuth, async (req, res) => {
         createtAt: "desc",
       },
     });
-    res.json({ data: cards, total });
+    res.json({ data: cards, total, provider });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -134,7 +145,11 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
       });
     }
 
-    if (seller.walletAmount < card.price) {
+    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
+    const companyPrice =
+      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+
+    if (seller.walletAmount < cardPrice) {
       return res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -162,8 +177,8 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
       data = {
         ...data[0],
         walletAmount: seller.walletAmount,
-        price: card?.price,
-        companyPrice: card?.companyPrice,
+        price: cardPrice,
+        companyPrice,
       };
     }
     res.status(response.status).json(data);
@@ -196,7 +211,11 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
       },
     });
 
-    if (seller?.walletAmount < card?.companyPrice) {
+    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
+    const companyPrice =
+      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+
+    if (seller?.walletAmount < companyPrice) {
       res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -226,11 +245,11 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
 
     let payment;
     if (!data.error) {
-      const card = await prisma.card.findUnique({
-        where: {
-          id: parseInt(providerCardID),
-        },
-      });
+      // const card = await prisma.card.findUnique({
+      //   where: {
+      //     id: parseInt(providerCardID),
+      //   },
+      // });
 
       payment = await prisma.payment.create({
         data: {
@@ -240,9 +259,10 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
+          agentId: seller?.agentId || null,
           companyCardID: data?.id,
-          price: card?.price,
-          companyPrice: card?.companyPrice,
+          price: cardPrice,
+          companyPrice,
           qty: 1,
           providerCardID: parseInt(providerCardID),
           item: data,
@@ -254,8 +274,8 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - card?.companyPrice,
-          paymentAmount: seller.paymentAmount + card?.companyPrice,
+          walletAmount: seller.walletAmount - companyPrice,
+          paymentAmount: seller.paymentAmount + companyPrice,
         },
       });
     }

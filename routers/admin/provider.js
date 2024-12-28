@@ -118,8 +118,6 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
 
-  console.log(id , newPassword);
-
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const provider = await prisma.provider.findUnique({

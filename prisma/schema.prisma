@@ -15,30 +15,59 @@ model Admin {
   type      AdminType
   createtAt DateTime  @default(now())
   provider  Provider?
+  agent     Agent?
 }
 
 model Provider {
-  id        Int       @id @default(autoincrement())
-  name      String
-  phone     String?
-  address   String?
-  adminId   Int?      @unique
-  createtAt DateTime  @default(now())
-  walletAmount Float @default(0)
-  active    Boolean   @default(true)
-  cards     Card[]
-  payments  Payment[]
-  admin     Admin?    @relation(fields: [adminId], references: [id])
-  sellers   Seller[]
-  wallets   Wallet[]
+  id             Int              @id @default(autoincrement())
+  name           String
+  phone          String?
+  address        String?
+  adminId        Int?             @unique
+  createtAt      DateTime         @default(now())
+  walletAmount   Float            @default(0)
+  active         Boolean          @default(true)
+  cards          Card[]
+  payments       Payment[]
+  admin          Admin?           @relation(fields: [adminId], references: [id])
+  sellers        Seller[]
+  wallets        Wallet[]
   providerWallet ProviderWallet[]
+  agents         Agent[]
+}
+
+model Agent {
+  id           Int           @id @default(autoincrement())
+  name         String
+  phone        String?
+  address      String?
+  adminId      Int?          @unique
+  sellers      Seller[]
+  providerId   Int
+  provider     Provider      @relation(fields: [providerId], references: [id])
+  createtAt    DateTime      @default(now())
+  walletAmount Float         @default(0)
+  active       Boolean       @default(true)
+  agentWallet  AgentWallet[]
+  admin        Admin?        @relation(fields: [adminId], references: [id])
+  wallets      Wallet[]
+  payments     Payment[]
+}
+
+model AgentWallet {
+  id        Int      @id @default(autoincrement())
+  amount    Float    @default(0)
+  date      DateTime @default(now())
+  createtAt DateTime @default(now())
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+  agentId   Int?
 }
 
 model ProviderWallet {
-  id         Int       @id @default(autoincrement())
-  amount     Float     @default(0)
-  date       DateTime  @default(now())
-  createtAt  DateTime  @default(now())
+  id         Int      @id @default(autoincrement())
+  amount     Float    @default(0)
+  date       DateTime @default(now())
+  createtAt  DateTime @default(now())
   providerId Int
   provider   Provider @relation(fields: [providerId], references: [id])
 }
@@ -51,6 +80,7 @@ model Seller {
   address       String?
   phone         String?
   providerId    Int
+  agentId       Int?
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
   isHajji       Boolean   @default(false)
@@ -59,17 +89,21 @@ model Seller {
   payments      Payment[]
   provider      Provider  @relation(fields: [providerId], references: [id])
   wallet        Wallet[]
+  agent         Agent?    @relation(fields: [agentId], references: [id])
 }
 
 model Wallet {
-  id         Int       @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   amount     Float
-  date       DateTime  @default(now())
-  createtAt  DateTime  @default(now())
+  date       DateTime   @default(now())
+  createtAt  DateTime   @default(now())
   sellerId   Int
   providerId Int?
-  Provider   Provider? @relation(fields: [providerId], references: [id])
-  seller     Seller    @relation(fields: [sellerId], references: [id])
+  agentId    Int?
+  Provider   Provider?  @relation(fields: [providerId], references: [id])
+  Agent      Agent?     @relation(fields: [agentId], references: [id])
+  seller     Seller     @relation(fields: [sellerId], references: [id])
+  from       FromWallet @default(PROVIDER)
 }
 
 model Payment {
@@ -82,22 +116,26 @@ model Payment {
   sellerId       Int?
   item           Json?
   providerId     Int?
+  agentId        Int?
   activeBy       Json?
   companyPrice   Float?
   provider       Provider? @relation(fields: [providerId], references: [id])
+  agent          Agent?    @relation(fields: [agentId], references: [id])
   seller         Seller?   @relation(fields: [sellerId], references: [id])
 }
 
 model Card {
-  id           Int       @id @default(autoincrement())
-  price        Float
-  companyPrice Float
-  providerId   Int?
-  cardTypeId   Int
-  active       Boolean   @default(true)
-  createtAt    DateTime  @default(now())
-  cardType     CardType  @relation(fields: [cardTypeId], references: [id])
-  provider     Provider? @relation(fields: [providerId], references: [id])
+  id            Int       @id @default(autoincrement())
+  price         Float
+  companyPrice  Float
+  providerPrice Float?
+  agentPrice    Float?
+  providerId    Int?
+  cardTypeId    Int
+  active        Boolean   @default(true)
+  createtAt     DateTime  @default(now())
+  cardType      CardType  @relation(fields: [cardTypeId], references: [id])
+  provider      Provider? @relation(fields: [providerId], references: [id])
 }
 
 model CardType {
@@ -113,4 +151,10 @@ model CardType {
 enum AdminType {
   ADMIN
   PROVIDER
+  AGENT
+}
+
+enum FromWallet {
+  PROVIDER
+  AGENT
 }
