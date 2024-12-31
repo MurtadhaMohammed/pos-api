@@ -22,11 +22,18 @@ router.post("/", dashboardAuth, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let agentData = null;
+
+  if (agentId){
     const agent = await prisma.agent.findUnique({
       where: {
         id: agentId,
       },
     });
+
+    agentData = agent
+  }
+    
 
     const seller = await prisma.seller.create({
       data: {
@@ -35,7 +42,7 @@ router.post("/", dashboardAuth, async (req, res) => {
         password: hashedPassword,
         phone,
         address,
-        providerId: agentId ? agent?.providerId : providerId,
+        providerId: agentId ? agentData?.providerId : providerId,
         agentId,
       },
     });

@@ -180,7 +180,7 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
             companyCardID: true,
           },
         },
-      },
+      }, 
     });
 
     const companyCardIds = Array.from(
@@ -219,6 +219,40 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
   } catch (error) {
     console.error("Error fetching card summary:", error.message);
     res.status(500).json({ error: "An error occurred while fetching the summary" });
+  }
+});
+
+router.put('/update-price/:id', dashboardAuth, async (req, res) => {
+  const { id } = req.params; 
+  const { providerPrice } = req.body;
+  const provider = req?.user
+
+  if (provider?.type == !'PROVIDER'){
+    return res.status(500).json({ error: "user not provider" });
+  }
+
+  const providerId = provider.id
+
+  try {
+    const card = await prisma.card.findUnique({ where: { id: parseInt(id) } });
+    
+    if (!card) {
+      return res.status(404).json({ error: "Card not found" });
+    }
+ 
+    if (card.providerId !== null && card.providerId !== providerId) {
+      return res.status(400).json({ error: "Provider ID does not match the card's provider" });
+    }
+
+    const updatedCard = await prisma.card.update({
+      where: { id: parseInt(id) },
+      data: { providerPrice: providerPrice }, 
+    });
+
+    res.json({ message: "Provider price updated successfully", updatedCard });
+  } catch (error) {
+    console.error("Error updating provider price:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
