@@ -35,7 +35,6 @@ router.post("/", providerAuth, async (req, res) => {
         providerId: parseInt(providerId),
       },
     });
-
     res.status(201).json({ agent, admin });
   } catch (error) {
     console.error(error);
@@ -159,17 +158,16 @@ router.get("/about/:id", dashboardAuth, async (req, res) => {
 });
 
 router.get("/summary/:id", dashboardAuth, async (req, res) => {
-  const agentId =  req.params.id;
+  const agentId = req.params.id;
 
   if (!agentId) {
     return res.status(400).json({ error: "Provider ID is required" });
   }
   try {
-
     const agent = await prisma.agent.findUnique({
       where: { id: Number(agentId) },
       select: { providerId: true },
-    }); 
+    });
 
     if (!agent.providerId) {
       return res.status(404).json({ error: "provider not found" });
@@ -199,23 +197,25 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
       return res.status(404).json({ error: "No cards found for the provider" });
     }
 
-   const formData = new FormData();
-   formData.append("companyCardIds", JSON.stringify(companyCardIds));
+    const formData = new FormData();
+    formData.append("companyCardIds", JSON.stringify(companyCardIds));
 
-   const response = await fetch(
-     "https://client.nojoomalrabiaa.com/api/v1/client/card-summary", 
-     {
-       method: "POST",
-       headers: {
-         "Authorization": `Bearer ${process.env.COMPANY_TOKEN}`,
-       },
-       body: formData,
-     }
-   );
+    const response = await fetch(
+      "https://client.nojoomalrabiaa.com/api/v1/client/card-summary",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+        },
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(response.status).json({ error: `External API error: ${errorText}` });
+      return res
+        .status(response.status)
+        .json({ error: `External API error: ${errorText}` });
     }
 
     const externalResponseData = await response.json();
@@ -226,32 +226,39 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching card summary:", error.message);
-    res.status(500).json({ error: "An error occurred while fetching the summary" });
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching the summary" });
   }
 });
 
-router.put('/update-price/:cardId', dashboardAuth, async (req, res) => {
+router.put("/update-price/:cardId", dashboardAuth, async (req, res) => {
   const { cardId } = req.params;
   const { agentPrice } = req.body;
-  const agent = req?.user
+  const agent = req?.user;
 
-  console.log(req?.user)
+  console.log(req?.user);
 
-  try { 
-
-    const agentInfo = await prisma.agent.findUnique({ where: { id: agent.agentId } });
+  try {
+    const agentInfo = await prisma.agent.findUnique({
+      where: { id: agent.agentId },
+    });
 
     if (!agentInfo) {
       return res.status(400).json({ error: "Agent not found" });
     }
 
-    const card = await prisma.card.findUnique({ where: { id: parseInt(cardId) } });
+    const card = await prisma.card.findUnique({
+      where: { id: parseInt(cardId) },
+    });
     if (!card) {
       return res.status(404).json({ error: "Card not found" });
     }
 
     if (card.providerId !== agentInfo.providerId) {
-      return res.status(403).json({ error: "Agent and card do not belong to the same provider" });
+      return res
+        .status(403)
+        .json({ error: "Agent and card do not belong to the same provider" });
     }
 
     const updatedCard = await prisma.card.update({
@@ -266,8 +273,6 @@ router.put('/update-price/:cardId', dashboardAuth, async (req, res) => {
     console.error("Error updating agent price:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-}); 
-
-
+});
 
 module.exports = router;

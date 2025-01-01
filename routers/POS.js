@@ -68,7 +68,8 @@ router.get("/cards", sellerAuth, async (req, res) => {
       },
     });
 
-    const cards = await prisma.card.findMany({
+    const hasAgent = !!seller?.agentId;
+    const cards = await prisma[hasAgent ? "agentCard" : "card"].findMany({
       where: {
         providerId: Number(req?.user?.providerId),
         cardType: {
@@ -82,12 +83,12 @@ router.get("/cards", sellerAuth, async (req, res) => {
 
     let data = cards?.map((el) => ({
       id: el?.id,
-      price: (seller?.agentId ? el?.agentPrice : el?.price) || 0,
-      companyPrice:
-        (seller?.agentId ? el?.providerPrice : el?.companyPrice) || 0,
+      price: el?.price,
+      companyPrice: el?.companyPrice,
       image: el?.cardType?.image,
       name: el?.cardType?.name,
       companyCardID: el?.cardType?.companyCardID,
+      source: hasAgent ? "Agent" : "Provider",
     }));
     res.json(data);
   } catch (error) {
@@ -165,7 +166,21 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
   }
 
   try {
-    const card = await prisma.card.findFirst({
+    const seller = await prisma.seller.findUnique({
+      where: {
+        id: parseInt(req?.user?.id),
+      },
+    });
+
+    if (!seller.active) {
+      return res.status(500).json({
+        error: "This account is not active!",
+      });
+    }
+
+    const hasAgent = !!seller?.agentId;
+
+    const card = await prisma[hasAgent ? "agentCard" : "card"].findFirst({
       include: {
         cardType: true,
       },
@@ -182,21 +197,8 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       });
     }
 
-    const seller = await prisma.seller.findUnique({
-      where: {
-        id: parseInt(req?.user?.id),
-      },
-    });
-
-    if (!seller.active) {
-      return res.status(500).json({
-        error: "This account is not active!",
-      });
-    }
-
-    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
-    const companyPrice =
-      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+    const cardPrice = card?.price;
+    const companyPrice = card?.companyPrice;
 
     if (seller.walletAmount < cardPrice) {
       return res.status(500).json({
@@ -249,21 +251,20 @@ router.post("/purchase", sellerAuth, async (req, res) => {
   }
 
   try {
-    const card = await prisma.card.findUnique({
-      where: {
-        id: Number(providerCardID),
-      },
-    });
-
     const seller = await prisma.seller.findUnique({
       where: {
         id: Number(req?.user?.id),
       },
     });
+    const hasAgent = !!seller?.agentId;
+    const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
+      where: {
+        id: Number(providerCardID), // also agent card id if has agent
+      },
+    });
 
-    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
-    const companyPrice =
-      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+    const cardPrice = card?.price;
+    const companyPrice = card?.companyPrice;
 
     if (seller?.walletAmount < companyPrice) {
       res.status(500).json({
@@ -351,21 +352,25 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
   }
 
   try {
-    const card = await prisma.card.findUnique({
-      where: {
-        id: Number(providerCardID),
-      },
-    });
-
     const seller = await prisma.seller.findUnique({
       where: {
         id: Number(sellerId),
       },
     });
 
-    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
-    const companyPrice =
-      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+    const hasAgent = !!seller?.agentId;
+    const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
+      where: {
+        id: Number(providerCardID), // also agent card id if has agent
+      },
+    });
+
+    if (!card) {
+      return res.status(404).json({ error: "Card Not Found!." });
+    }
+
+    const cardPrice = card?.price;
+    const companyPrice = card?.companyPrice;
 
     if (seller?.walletAmount < companyPrice) {
       res.status(500).json({
@@ -405,7 +410,11 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
-          agentId: seller?.agentId || null,
+          agent: seller?.agentId
+            ? {
+                connect: { id: seller.agentId }, // Use the relationship here
+              }
+            : undefined, // Leave undefined if no agent
           companyCardID: data[0]?.id,
           price: cardPrice,
           companyPrice,

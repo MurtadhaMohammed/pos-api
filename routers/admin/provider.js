@@ -54,6 +54,9 @@ router.get("/", adminAuth, async (req, res) => {
       },
       take,
       skip,
+      orderBy:{
+        createtAt: "desc"
+      }
     });
     res.json({ data: providers, total });
   } catch (error) {

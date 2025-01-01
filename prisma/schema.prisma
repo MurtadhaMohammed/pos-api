@@ -34,6 +34,7 @@ model Provider {
   wallets        Wallet[]
   providerWallet ProviderWallet[]
   agents         Agent[]
+  agentCards     AgentCard[]
 }
 
 model Agent {
@@ -52,6 +53,7 @@ model Agent {
   admin        Admin?        @relation(fields: [adminId], references: [id])
   wallets      Wallet[]
   payments     Payment[]
+  agentCards   AgentCard[]
 }
 
 model AgentWallet {
@@ -125,27 +127,42 @@ model Payment {
 }
 
 model Card {
-  id            Int       @id @default(autoincrement())
-  price         Float
-  companyPrice  Float
-  providerPrice Float?
-  agentPrice    Float?
-  providerId    Int?
-  cardTypeId    Int
-  active        Boolean   @default(true)
-  createtAt     DateTime  @default(now())
-  cardType      CardType  @relation(fields: [cardTypeId], references: [id])
-  provider      Provider? @relation(fields: [providerId], references: [id])
+  id           Int         @id @default(autoincrement())
+  price        Float
+  companyPrice Float
+  providerId   Int?
+  cardTypeId   Int
+  active       Boolean     @default(true)
+  createtAt    DateTime    @default(now())
+  cardType     CardType    @relation(fields: [cardTypeId], references: [id])
+  provider     Provider?   @relation(fields: [providerId], references: [id])
+  agentCards   AgentCard[]
+}
+
+model AgentCard {
+  id           Int      @id @default(autoincrement())
+  price        Float
+  companyPrice Float
+  agentId      Int
+  providerId   Int
+  cardId       Int
+  createtAt    DateTime @default(now())
+  card         Card     @relation(fields: [cardId], references: [id])
+  cardType     CardType @relation(fields: [cardTypeId], references: [id])
+  cardTypeId   Int
+  agent        Agent    @relation(fields: [agentId], references: [id])
+  provider     Provider @relation(fields: [providerId], references: [id])
 }
 
 model CardType {
-  id            Int      @id @default(autoincrement())
+  id            Int         @id @default(autoincrement())
   image         String
   name          String
   companyCardID Int
-  createtAt     DateTime @default(now())
-  active        Boolean  @default(true)
+  createtAt     DateTime    @default(now())
+  active        Boolean     @default(true)
   cards         Card[]
+  agentCards    AgentCard[]
 }
 
 enum AdminType {
