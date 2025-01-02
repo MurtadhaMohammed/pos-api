@@ -249,7 +249,7 @@ router.put('/update-price/:id', dashboardAuth, async (req, res) => {
 
     const updatedCard = await prisma.card.update({
       where: { id: parseInt(id) },
-      data: { providerPrice: providerPrice }, 
+      data: { price: providerPrice }, 
     });
 
     res.json({ message: "Provider price updated successfully", updatedCard });

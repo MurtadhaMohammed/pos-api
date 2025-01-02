@@ -237,8 +237,6 @@ router.put("/update-price/:cardId", dashboardAuth, async (req, res) => {
   const { agentPrice } = req.body;
   const agent = req?.user;
 
-  console.log(req?.user);
-
   try {
     const agentInfo = await prisma.agent.findUnique({
       where: { id: agent.agentId },
@@ -248,7 +246,7 @@ router.put("/update-price/:cardId", dashboardAuth, async (req, res) => {
       return res.status(400).json({ error: "Agent not found" });
     }
 
-    const card = await prisma.card.findUnique({
+    const card = await prisma.agentCard.findUnique({
       where: { id: parseInt(cardId) },
     });
     if (!card) {
@@ -261,10 +259,10 @@ router.put("/update-price/:cardId", dashboardAuth, async (req, res) => {
         .json({ error: "Agent and card do not belong to the same provider" });
     }
 
-    const updatedCard = await prisma.card.update({
+    const updatedCard = await prisma.agentCard.update({
       where: { id: parseInt(cardId) },
       data: {
-        agentPrice: agentPrice,
+        price: agentPrice,
       },
     });
 
