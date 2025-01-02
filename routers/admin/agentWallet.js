@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
 const providerAuth = require("../../middleware/providerAuth");
+const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
 //create wallet
@@ -73,23 +74,23 @@ router.post("/", providerAuth, async (req, res) => {
   }
 });
 
-router.get("/", providerAuth, async (req, res) => {
+router.get("/", agentAuth, async (req, res) => {
   try {
-    const providerId = req?.user?.providerId;
+    // const providerId = req?.user?.providerId;
     const take = parseInt(req.query.take || 10);
     const skip = parseInt(req.query.skip || 0);
     const agentId = parseInt(req.query.agentId) || undefined;
+    const isAgent = req.user.type === "AGENT";
+    //const isProvider = req.user.type === "PROVIDER";
+
+    if (isAgent && parseInt(req.user.agentId) !== agentId) {
+      return res
+        .status(403)
+        .json({ error: "You do not have permission to perform this action" });
+    }
 
     let where = {
-      agent: {
-        AND: [
-          {
-            providerId:
-              req?.user?.type === "ADMIN" ? undefined : parseInt(providerId),
-          },
-          { id: agentId },
-        ],
-      },
+      agentId,
     };
 
     let agent = null;

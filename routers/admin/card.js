@@ -21,17 +21,21 @@ router.post("/", adminAuth, async (req, res) => {
 // Read all Cards
 router.get("/", dashboardAuth, async (req, res) => {
   try {
-    const { type, providerId } = req?.user;
-    const isProvider = type === "PROVIDER";
     const take = parseInt(req.query.take || 8);
-    const skip = parseInt(req.query.skip | 0);
-    const where = isProvider
-      ? {
-          providerId: parseInt(providerId),
-        }
-      : {
-          providerId: parseInt(req.query.providerId) || undefined,
-        };
+    const skip = parseInt(req.query.skip || 0);
+    const providerId = parseInt(req.query.providerId);
+
+    const isProvider = req.user.type === "PROVIDER";
+
+    if (isProvider && parseInt(req.user.providerId) !== providerId) {
+      return res
+        .status(403)
+        .json({ error: "You do not have permission to perform this action" });
+    }
+
+    const where = {
+      providerId: parseInt(req.query.providerId) || undefined,
+    };
 
     let provider = null;
     if (req.query.providerId) {
@@ -88,15 +92,15 @@ router.get("/:providerId/:cardTypeId", async (req, res) => {
 // Update Card by ID
 router.put("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
-  const { price, providerId, cardTypeId, companyPrice } = req.body;
+  const { price, providerId, cardTypeId, companyPrice, sellerPrice } = req.body;
   const { type } = req?.user;
   const isProvider = type === "PROVIDER";
   try {
     const card = await prisma.card.update({
       where: { id: Number(id) },
       data: isProvider
-        ? { price }
-        : { price, providerId, cardTypeId, companyPrice },
+        ? { price, sellerPrice }
+        : { price, providerId, cardTypeId, companyPrice, sellerPrice },
     });
     res.json(card);
   } catch (error) {

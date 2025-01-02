@@ -5,8 +5,11 @@ const adminAuth = require("../../middleware/adminAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
 const providerAuth = require("../../middleware/providerAuth");
 const agentAuth = require("../../middleware/agentAuth");
-const router = express.Router();
+const FormData = require("form-data");
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
+const router = express.Router();
 // insert Agent
 router.post("/", providerAuth, async (req, res) => {
   const { name, phone, address, username, password, providerId } = req.body;

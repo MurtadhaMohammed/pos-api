@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
 const providerAuth = require("../../middleware/providerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
+const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
 // Create Card
@@ -31,19 +32,21 @@ router.post("/", providerAuth, async (req, res) => {
 });
 
 // Read all Cards
-router.get("/", providerAuth, async (req, res) => {
+router.get("/", agentAuth, async (req, res) => {
   try {
-    const { type, providerId } = req?.user;
-    const isProvider = type === "PROVIDER";
     const take = parseInt(req.query.take || 8);
-    const skip = parseInt(req.query.skip | 0);
-    const where = isProvider
-      ? {
-          providerId: parseInt(providerId),
-        }
-      : {
-          agentId: parseInt(req.query.agentId) || undefined,
-        };
+    const skip = parseInt(req.query.skip || 0);
+    const agentId = parseInt(req.query.agentId);
+    const isAgent = req.user.type === "AGENT";
+
+    if (isAgent && parseInt(req.user.agentId) !== agentId) {
+      return res
+        .status(403)
+        .json({ error: "You do not have permission to perform this action" });
+    }
+    const where = {
+      agentId: parseInt(req.query.agentId) || undefined,
+    };
 
     let agent = null;
     if (req.query.agentId) {
@@ -78,7 +81,9 @@ router.get("/agent", dashboardAuth, async (req, res) => {
     const { type, agentId } = req?.user;
 
     if (type !== "AGENT") {
-      return res.status(403).json({ message: "Only agents can access their cards." });
+      return res
+        .status(403)
+        .json({ message: "Only agents can access their cards." });
     }
 
     const cards = await prisma.agentCard.findMany({
@@ -95,7 +100,6 @@ router.get("/agent", dashboardAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // // Update Card by ID
 // router.put("/:id", dashboardAuth, async (req, res) => {
@@ -116,28 +120,31 @@ router.get("/agent", dashboardAuth, async (req, res) => {
 //   }
 // });
 
-router.put("/:id", dashboardAuth, async (req, res) => {
+router.put("/:id", agentAuth, async (req, res) => {
   const { id } = req.params;
-  const { price, cardTypeId, companyPrice } = req.body; 
+  const { price, cardTypeId, companyPrice, sellerPrice } = req.body;
   const { type } = req?.user;
 
   const isProvider = type === "PROVIDER";
+  const isAgent = type === "AGENT";
   const isAdmin = type === "ADMIN";
 
-  if (!isAdmin && !isProvider) {
+  if (!isAdmin && !isProvider && !isAgent) {
     return res.status(403).json({ message: "User type not authorized" });
   }
 
   try {
     const updatedCard = await prisma.agentCard.update({
       where: { id: Number(id) },
-      data: isProvider
-        ? { price }
-        : {
-            price,
-            cardTypeId,
-            companyPrice,
-          },
+      data:
+        isProvider || isAgent
+          ? { price, sellerPrice }
+          : {
+              price,
+              cardTypeId,
+              companyPrice,
+              sellerPrice,
+            },
     });
 
     res.json(updatedCard);
@@ -145,6 +152,5 @@ router.put("/:id", dashboardAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 module.exports = router;

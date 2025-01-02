@@ -4,6 +4,9 @@ const bcrypt = require("bcrypt");
 const adminAuth = require("../../middleware/adminAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
 const router = express.Router();
+const FormData = require("form-data");
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 // insert Provider
 router.post("/", adminAuth, async (req, res) => {
@@ -54,9 +57,9 @@ router.get("/", adminAuth, async (req, res) => {
       },
       take,
       skip,
-      orderBy:{
-        createtAt: "desc"
-      }
+      orderBy: {
+        createtAt: "desc",
+      },
     });
     res.json({ data: providers, total });
   } catch (error) {
@@ -95,10 +98,10 @@ router.put("/:id", adminAuth, async (req, res) => {
 router.put("/active/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
 
-  try{
+  try {
     const provider = await prisma.provider.findUnique({
       where: { id: parseInt(id) },
-    })
+    });
 
     if (!provider) {
       return res.status(404).json({ error: "Provider not found" });
@@ -108,11 +111,11 @@ router.put("/active/:id", adminAuth, async (req, res) => {
       where: { id: parseInt(id) },
       data: {
         active: !provider.active,
-      }
-    })
+      },
+    });
 
-    res.json(updatedProvider)
-  }catch(error){
+    res.json(updatedProvider);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -124,7 +127,7 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const provider = await prisma.provider.findUnique({
-      where: { id: parseInt(id)},
+      where: { id: parseInt(id) },
     });
 
     if (!provider) {
@@ -134,10 +137,10 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
     const providerAdmin = provider.adminId;
 
     const updatedAdmin = await prisma.admin.update({
-      where: {id: parseInt(providerAdmin)},
+      where: { id: parseInt(providerAdmin) },
       data: { password: hashedPassword },
     });
-    console.log(updatedAdmin)
+    console.log(updatedAdmin);
 
     res.json({
       message: "Password updated successfully",
@@ -151,7 +154,6 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
 
 // so the provider can see his data in about section
 router.get("/about/:id", dashboardAuth, async (req, res) => {
-
   const providerId = req.params.id;
   try {
     const provider = await prisma.provider.findUnique({
@@ -161,11 +163,10 @@ router.get("/about/:id", dashboardAuth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-
 });
 
 router.get("/summary/:id", dashboardAuth, async (req, res) => {
-  const  providerId  = req.params.id;
+  const providerId = req.params.id;
 
   if (!providerId) {
     return res.status(400).json({ error: "Provider ID is required" });
@@ -183,7 +184,7 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
             companyCardID: true,
           },
         },
-      }, 
+      },
     });
 
     const companyCardIds = Array.from(
@@ -194,23 +195,27 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
       return res.status(404).json({ error: "No cards found for the provider" });
     }
 
-   const formData = new FormData();
-   formData.append("companyCardIds", JSON.stringify(companyCardIds));
+    const formData = new FormData();
+    formData.append("companyCardIds", JSON.stringify(companyCardIds));
 
-   const response = await fetch(
-     "https://client.nojoomalrabiaa.com/api/v1/client/card-summary", 
-     {
-       method: "POST",
-       headers: {
-         "Authorization": `Bearer ${process.env.COMPANY_TOKEN}`,
-       },
-       body: formData,
-     }
-   );
+    const response = await fetch(
+      "https://client.nojoomalrabiaa.com/api/v1/client/card-summary",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+        },
+        body: formData,
+      }
+    );
+
+
 
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(response.status).json({ error: `External API error: ${errorText}` });
+      return res
+        .status(response.status)
+        .json({ error: `External API error: ${errorText}` });
     }
 
     const externalResponseData = await response.json();
@@ -221,35 +226,39 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching card summary:", error.message);
-    res.status(500).json({ error: "An error occurred while fetching the summary" });
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching the summary" });
   }
 });
 
-router.put('/update-price/:id', dashboardAuth, async (req, res) => {
-  const { id } = req.params; 
+router.put("/update-price/:id", dashboardAuth, async (req, res) => {
+  const { id } = req.params;
   const { providerPrice } = req.body;
-  const provider = req?.user
+  const provider = req?.user;
 
-  if (provider?.type == !'PROVIDER'){
+  if (provider?.type == !"PROVIDER") {
     return res.status(500).json({ error: "user not provider" });
   }
 
-  const providerId = provider.id
+  const providerId = provider.id;
 
   try {
     const card = await prisma.card.findUnique({ where: { id: parseInt(id) } });
-    
+
     if (!card) {
       return res.status(404).json({ error: "Card not found" });
     }
- 
+
     if (card.providerId !== null && card.providerId !== providerId) {
-      return res.status(400).json({ error: "Provider ID does not match the card's provider" });
+      return res
+        .status(400)
+        .json({ error: "Provider ID does not match the card's provider" });
     }
 
     const updatedCard = await prisma.card.update({
       where: { id: parseInt(id) },
-      data: { price: providerPrice }, 
+      data: { price: providerPrice },
     });
 
     res.json({ message: "Provider price updated successfully", updatedCard });
@@ -258,7 +267,5 @@ router.put('/update-price/:id', dashboardAuth, async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
 
 module.exports = router;

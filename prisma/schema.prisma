@@ -130,6 +130,7 @@ model Card {
   id           Int         @id @default(autoincrement())
   price        Float
   companyPrice Float
+  sellerPrice  Float       @default(0)
   providerId   Int?
   cardTypeId   Int
   createtAt    DateTime    @default(now())
@@ -143,6 +144,7 @@ model AgentCard {
   id           Int      @id @default(autoincrement())
   price        Float
   companyPrice Float
+  sellerPrice  Float    @default(0)
   agentId      Int
   providerId   Int
   cardId       Int
