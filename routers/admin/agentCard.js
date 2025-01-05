@@ -23,7 +23,7 @@ router.post("/", providerAuth, async (req, res) => {
         agentId,
         cardId,
         companyPrice,
-        sellerPrice
+        sellerPrice,
       },
     });
     res.json(agentCard);
@@ -137,15 +137,14 @@ router.put("/:id", agentAuth, async (req, res) => {
   try {
     const updatedCard = await prisma.agentCard.update({
       where: { id: Number(id) },
-      data:
-        isProvider || isAgent
-          ? { price, sellerPrice }
-          : {
-              price,
-              cardTypeId,
-              companyPrice,
-              sellerPrice,
-            },
+      data: isAgent
+        ? { price, sellerPrice }
+        : {
+            price,
+            cardTypeId,
+            companyPrice,
+            sellerPrice,
+          },
     });
 
     res.json(updatedCard);
