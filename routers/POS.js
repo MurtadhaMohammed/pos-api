@@ -84,7 +84,7 @@ router.get("/cards", sellerAuth, async (req, res) => {
     let data = cards?.map((el) => ({
       id: el?.id,
       price: el?.price,
-      companyPrice: el?.companyPrice,
+      companyPrice: el?.sellerPrice,
       image: el?.cardType?.image,
       name: el?.cardType?.name,
       companyCardID: el?.cardType?.companyCardID,
