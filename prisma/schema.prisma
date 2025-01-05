@@ -117,6 +117,7 @@ model Payment {
   createtAt      DateTime  @default(now())
   sellerId       Int?
   item           Json?
+  localCard      Json?
   providerId     Int?
   activeBy       Json?
   companyPrice   Float?

@@ -315,6 +315,7 @@ router.post("/purchase", sellerAuth, async (req, res) => {
           companyCardID: data[0]?.id,
           price: cardPrice,
           companyPrice,
+          localCard: card,
           qty: data?.length,
           providerCardID: parseInt(providerCardID),
           item: data,
@@ -364,7 +365,16 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
     const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
       where: {
         id: Number(providerCardID), // also agent card id if has agent
+        providerId,
+        ...(hasAgent ? { agentId: seller?.agentId } : {}),
       },
+      ...(hasAgent
+        ? {
+            include: {
+              card: true,
+            },
+          }
+        : {}),
     });
 
     if (!card) {
@@ -420,6 +430,7 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
           companyCardID: data[0]?.id,
           price: cardPrice,
           companyPrice,
+          localCard: card,
           qty: data?.length,
           providerCardID: parseInt(providerCardID),
           item: data,
