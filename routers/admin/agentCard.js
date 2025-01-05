@@ -130,17 +130,21 @@ router.put("/:id", agentAuth, async (req, res) => {
   const isAgent = type === "AGENT";
   const isAdmin = type === "ADMIN";
 
-  const card = await prisma.card.findUnique({
-    where: {
-      id: cardId,
-    },
-  });
-
   if (!isAdmin && !isProvider && !isAgent) {
     return res.status(403).json({ message: "User type not authorized" });
   }
 
   try {
+    let card;
+
+    if (cardId) {
+      card = await prisma.card.findUnique({
+        where: {
+          id: cardId,
+        },
+      });
+    }
+
     const updatedCard = await prisma.agentCard.update({
       where: { id: Number(id) },
       data: isAgent
