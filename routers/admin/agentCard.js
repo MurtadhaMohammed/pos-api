@@ -148,6 +148,7 @@ router.put("/:id", agentAuth, async (req, res) => {
         : {
             price,
             cardTypeId: card?.cardTypeId,
+            cardId,
             companyPrice,
             sellerPrice,
           },
