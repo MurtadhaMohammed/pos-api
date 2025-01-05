@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Create Card
 router.post("/", providerAuth, async (req, res) => {
-  const { price, agentId, cardId, companyPrice } = req.body;
+  const { price, agentId, cardId, companyPrice, sellerPrice } = req.body;
   try {
     const card = await prisma.card.findUnique({
       where: {
@@ -23,6 +23,7 @@ router.post("/", providerAuth, async (req, res) => {
         agentId,
         cardId,
         companyPrice,
+        sellerPrice
       },
     });
     res.json(agentCard);
