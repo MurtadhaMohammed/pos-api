@@ -123,12 +123,18 @@ router.get("/agent", dashboardAuth, async (req, res) => {
 
 router.put("/:id", agentAuth, async (req, res) => {
   const { id } = req.params;
-  const { price, cardTypeId, companyPrice, sellerPrice } = req.body;
+  const { price, cardId, companyPrice, sellerPrice } = req.body;
   const { type } = req?.user;
 
   const isProvider = type === "PROVIDER";
   const isAgent = type === "AGENT";
   const isAdmin = type === "ADMIN";
+
+  const card = await prisma.card.findUnique({
+    where: {
+      id: cardId,
+    },
+  });
 
   if (!isAdmin && !isProvider && !isAgent) {
     return res.status(403).json({ message: "User type not authorized" });
@@ -141,7 +147,7 @@ router.put("/:id", agentAuth, async (req, res) => {
         ? { price, sellerPrice }
         : {
             price,
-            cardTypeId,
+            cardTypeId: card?.cardTypeId,
             companyPrice,
             sellerPrice,
           },
