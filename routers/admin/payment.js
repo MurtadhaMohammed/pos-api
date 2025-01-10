@@ -288,4 +288,62 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
   }
 });
 
+router.get("/seller", async (req, res) => {
+  const { sellerId, startDate, endDate } = req.query;
+
+  if (!sellerId) {
+    return res.status(400).json({ error: "sellerId is required." });
+  }
+
+  try {
+    const dateFilter = {};
+
+    if (startDate) {
+      dateFilter.gte = new Date(startDate);
+    }
+
+    if (endDate) {
+      dateFilter.lte = new Date(endDate);
+    }
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        sellerId: parseInt(sellerId),
+        createtAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+      },
+      include: {
+        seller: true,
+        provider: true,
+        agent: true,
+      },
+    });
+
+    let totalPayment = 0;
+    let totalCompanyPayment = 0;
+    let totalNetProfit = 0;
+
+    payments.forEach((payment) => {
+      totalPayment += payment.price * (payment.qty || 1);
+      totalCompanyPayment += payment.companyPrice * (payment.qty || 1);
+    });
+
+    totalNetProfit =  totalPayment - totalCompanyPayment;
+
+
+    return res.status(200).json({
+      sellerId: sellerId,
+      startDate: startDate || "Not specified",
+      endDate: endDate || "Not specified",
+      totalPayment,
+      cashback:totalNetProfit,
+      payments
+    });
+  } catch (error) {
+    console.error("Error calculating payments:", error);
+    return res.status(500).json({ error: "An error occurred while calculating payments." });
+  }
+});
+
+
+
 module.exports = router;
