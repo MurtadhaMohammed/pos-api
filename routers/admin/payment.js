@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const sellerAuth = require("../../middleware/sellerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
+const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
 // Create Payment
@@ -345,5 +346,52 @@ router.get("/seller", async (req, res) => {
 });
 
 
+
+router.get("/info/:agentId", async (req, res) => {
+  const { agentId } = req.params;
+
+  const payments = await prisma.payment.findMany({
+    where: {
+      agentId: parseInt(agentId),
+    },
+  });
+
+  let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
+  let cards = payments.map((el) => ({
+    title: el?.item[0]?.details?.title,
+    qty: el?.qty,
+    sellerPayments: el?.price * el?.qty,
+    agentPayments: el?.companyPrice * el?.qty,
+    // providerPayments: el?.localCard?.companyPrice * el?.qty,
+    sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
+    agentProfit:
+      el?.companyPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
+  }));
+
+  const groupedCards = Object.values(
+    cards.reduce((acc, card) => {
+      if (!acc[card.title]) {
+        acc[card.title] = {
+          title: card.title,
+          qty: 0,
+          sellerPayments: 0,
+          agentPayments: 0,
+          // providerPayments: 0,
+          sellerProfit: 0,
+          agentProfit: 0,
+        };
+      }
+      acc[card.title].qty += card.qty;
+      acc[card.title].sellerPayments += card.sellerPayments;
+      acc[card.title].agentPayments += card.agentPayments;
+      acc[card.title].sellerProfit += card.sellerProfit;
+      acc[card.title].agentProfit += card.agentProfit;
+      // acc[card.title].providerPayments += card.providerPayments;
+      return acc;
+    }, {})
+  );
+
+  res.json({ success: true, numberOfCards, cards: groupedCards });
+});
 
 module.exports = router;

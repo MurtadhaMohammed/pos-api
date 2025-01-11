@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
+const providerAuth = require("../../middleware/providerAuth");
 const router = express.Router();
 
 //create wallet
@@ -40,11 +41,18 @@ router.post("/", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/", adminAuth, async (req, res) => {
+router.get("/", providerAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 10);
     const skip = parseInt(req.query.skip || 0);
     const providerId = parseInt(req.query.providerId) || undefined;
+    const isProvider = req.user.type === "PROVIDER";
+
+    if (isProvider && parseInt(req.user.providerId) !== providerId) {
+      return res
+        .status(403)
+        .json({ error: "You do not have permission to perform this action" });
+    }
 
     let provider = null;
     if (providerId) {
