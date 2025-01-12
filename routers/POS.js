@@ -202,7 +202,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     const cardPrice = card?.price;
     const companyPrice = card?.sellerPrice;
 
-    if (seller.walletAmount < cardPrice) {
+    if (seller.walletAmount < (cardPrice * quantity || 1)) {
       return res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -384,12 +384,12 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
     const cardPrice = card?.price;
     const companyPrice = card?.sellerPrice;
 
-    if (seller?.walletAmount < companyPrice) {
-      res.status(500).json({
-        walletAmount: seller.walletAmount,
-        error: "Your wallet is not enough!",
-      });
-    }
+    // if (seller?.walletAmount < (cardPrice * qty)) {
+    //   res.status(500).json({
+    //     walletAmount: seller.walletAmount,
+    //     error: "Your wallet is not enough!",
+    //   });
+    // }
 
     // Make a request to the external API
     const formdata = new FormData();
