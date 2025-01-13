@@ -331,6 +331,8 @@ router.get("/seller", async (req, res) => {
     totalNetProfit =  totalPayment - totalCompanyPayment;
 
 
+
+
     return res.status(200).json({
       sellerId: sellerId,
       startDate: startDate || "Not specified",
@@ -346,14 +348,140 @@ router.get("/seller", async (req, res) => {
 });
 
 
+// router.get("/info/:agentId", async (req, res) => {
+//   const { agentId } = req.params;
 
-router.get("/info/:agentId", async (req, res) => {
+//   const payments = await prisma.payment.findMany({
+//     where: {
+//       agentId: parseInt(agentId),
+//     },
+//   });
+
+//   let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
+//   let cards = payments.map((el) => ({
+//     title: el?.item[0]?.details?.title,
+//     qty: el?.qty,
+//     sellerPayments: el?.price * el?.qty,
+//     agentPayments: el?.companyPrice * el?.qty,
+//     // providerPayments: el?.localCard?.companyPrice * el?.qty,
+//     sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
+//     agentProfit:
+//       el?.companyPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
+//   }));
+
+//   const groupedCards = Object.values(
+//     cards.reduce((acc, card) => {
+//       if (!acc[card.title]) {
+//         acc[card.title] = {
+//           title: card.title,
+//           qty: 0,
+//           sellerPayments: 0,
+//           agentPayments: 0,
+//           // providerPayments: 0,
+//           sellerProfit: 0,
+//           agentProfit: 0,
+//         };
+//       }
+//       acc[card.title].qty += card.qty;
+//       acc[card.title].sellerPayments += card.sellerPayments;
+//       acc[card.title].agentPayments += card.agentPayments;
+//       acc[card.title].sellerProfit += card.sellerProfit;
+//       acc[card.title].agentProfit += card.agentProfit;
+//       // acc[card.title].providerPayments += card.providerPayments;
+//       return acc;
+//     }, {})
+//   );
+
+//   res.json({ success: true, numberOfCards, cards: groupedCards });
+// });
+
+router.get("/info/agent/:agentId", async (req, res) => {
   const { agentId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  const parsedStartDate = startDate ? new Date(startDate) : null;
+  const parsedEndDate = endDate ? new Date(endDate) : null;
+
+  const whereCondition = {
+    agentId: parseInt(agentId),
+  };
+
+  if (parsedStartDate && parsedEndDate) {
+    whereCondition.createtAt = {
+      gte: parsedStartDate,  
+      lte: parsedEndDate,   
+    };
+  } else if (parsedStartDate) {
+    whereCondition.createtAt = {
+      gte: parsedStartDate,
+    };
+  } else if (parsedEndDate) {
+    whereCondition.createtAt = {
+      lte: parsedEndDate,
+    };
+  }
 
   const payments = await prisma.payment.findMany({
-    where: {
-      agentId: parseInt(agentId),
-    },
+    where: whereCondition,
+  });
+
+  let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
+  let cards = payments.map((el) => ({
+    title: el?.item[0]?.details?.title,
+    qty: el?.qty,
+    agentPayments: el?.localCard?.companyPrice * el?.qty,
+    agentProfit:
+      el?.localCard?.sellerPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
+  }));
+
+  const groupedCards = Object.values(
+    cards.reduce((acc, card) => {
+      if (!acc[card.title]) {
+        acc[card.title] = {
+          title: card.title,
+          qty: 0,
+          agentPayments: 0,
+          agentProfit: 0,
+        };
+      }
+      acc[card.title].qty += card.qty;
+      acc[card.title].agentPayments += card.agentPayments;
+      acc[card.title].agentProfit += card.agentProfit;
+      return acc;
+    }, {})
+  );
+
+  res.json({ success: true, numberOfCards, cards: groupedCards });
+});
+
+router.get("/info/seller/:sellerId", async (req, res) => {
+  const { sellerId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  const parsedStartDate = startDate ? new Date(startDate) : null;
+  const parsedEndDate = endDate ? new Date(endDate) : null;
+
+  const whereCondition = {
+    sellerId: parseInt(sellerId),
+  };
+
+  if (parsedStartDate && parsedEndDate) {
+    whereCondition.createtAt = {
+      gte: parsedStartDate,
+      lte: parsedEndDate,
+    };
+  } else if (parsedStartDate) {
+    whereCondition.createtAt = {
+      gte: parsedStartDate,
+    };
+  } else if (parsedEndDate) {
+    whereCondition.createtAt = {
+      lte: parsedEndDate,
+    };
+  }
+
+  const payments = await prisma.payment.findMany({
+    where: whereCondition,
   });
 
   let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
@@ -361,11 +489,7 @@ router.get("/info/:agentId", async (req, res) => {
     title: el?.item[0]?.details?.title,
     qty: el?.qty,
     sellerPayments: el?.price * el?.qty,
-    agentPayments: el?.companyPrice * el?.qty,
-    // providerPayments: el?.localCard?.companyPrice * el?.qty,
     sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
-    agentProfit:
-      el?.companyPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
   }));
 
   const groupedCards = Object.values(
@@ -375,22 +499,107 @@ router.get("/info/:agentId", async (req, res) => {
           title: card.title,
           qty: 0,
           sellerPayments: 0,
-          agentPayments: 0,
-          // providerPayments: 0,
           sellerProfit: 0,
-          agentProfit: 0,
         };
       }
       acc[card.title].qty += card.qty;
       acc[card.title].sellerPayments += card.sellerPayments;
-      acc[card.title].agentPayments += card.agentPayments;
       acc[card.title].sellerProfit += card.sellerProfit;
-      acc[card.title].agentProfit += card.agentProfit;
-      // acc[card.title].providerPayments += card.providerPayments;
       return acc;
     }, {})
   );
 
+  res.json({ success: true, numberOfCards, cards: groupedCards });
+});
+
+router.get("/info/provider/:providerId", async (req, res) => {
+  const { providerId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  const parsedStartDate = startDate ? new Date(startDate) : null;
+  const parsedEndDate = endDate ? new Date(endDate) : null;
+
+  const whereCondition = {
+    providerId: parseInt(providerId),
+  };
+
+  if (parsedStartDate && parsedEndDate) {
+    whereCondition.createtAt = {
+      gte: parsedStartDate,
+      lte: parsedEndDate,
+    };
+  } else if (parsedStartDate) {
+    whereCondition.createtAt = {
+      gte: parsedStartDate,
+    };
+  } else if (parsedEndDate) {
+    whereCondition.createtAt = {
+      lte: parsedEndDate,
+    };
+  }
+
+  const payments = await prisma.payment.findMany({
+    where: whereCondition,
+  });
+
+  const groupedPayments = payments.reduce((acc, payment) => {
+    const key = payment?.providerCardID;
+    const paymentTitle = Array.isArray(payment?.item) 
+      ? payment?.item[0]?.details?.title 
+      : payment?.item?.details?.title;
+    
+    console.log("payment new", paymentTitle);
+
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(payment);
+    return acc;
+  }, {});
+
+  Object.values(groupedPayments).forEach((group) => {
+    const existingTitle = group.find((p) => p?.item?.details?.title)?.item?.details?.title;
+
+    group.forEach((payment) => {
+      if (!payment?.item?.details?.title) {
+        payment.item = payment.item || {};
+        payment.item.details = payment.item.details || {};
+        payment.item.details.title = existingTitle || "Unknown Title"; 
+      }
+    });
+  });
+
+  const updatedPayments = Object.values(groupedPayments).flat();
+
+  const cards = updatedPayments.map((el) => {
+    const paymentTitle = Array.isArray(el?.item) 
+      ? el?.item[0]?.details?.title 
+      : el?.item?.details?.title;
+    
+    return {
+      title: paymentTitle || "Unknown Title",
+      qty: el?.qty || 0,
+      providerPayments: el?.localCard?.price * (el?.qty || 0),
+      providerProfit: (el?.localCard?.price - el?.localCard?.companyPrice) * (el?.qty || 0),
+    };
+  });
+
+  const groupedCards = Object.values(
+    cards.reduce((acc, card) => {
+      if (!acc[card.title]) {
+        acc[card.title] = {
+          title: card.title,
+          qty: 0,
+          providerPayments: 0,
+          providerProfit: 0,
+        };
+      }
+      acc[card.title].qty += card.qty;
+      acc[card.title].providerPayments += card.providerPayments;
+      acc[card.title].providerProfit += card.providerProfit;
+      return acc;
+    }, {})
+  );
+
+  const numberOfCards = groupedCards.reduce((sum, card) => sum + card.qty, 0);
   res.json({ success: true, numberOfCards, cards: groupedCards });
 });
 
