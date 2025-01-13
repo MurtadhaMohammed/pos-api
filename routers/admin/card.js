@@ -149,9 +149,8 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
       });
     }
 
-    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
-    const companyPrice =
-      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+    const cardPrice = card?.price ;
+    const companyPrice = card?.companyPrice
 
     if (seller.walletAmount < cardPrice) {
       return res.status(500).json({
@@ -215,11 +214,10 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
       },
     });
 
-    const cardPrice = (seller?.agentId ? card?.agentPrice : card?.price) || 0;
-    const companyPrice =
-      (seller?.agentId ? card?.providerPrice : card?.companyPrice) || 0;
+    const cardPrice = card?.price;
+    const companyPrice = card?.companyPrice;
 
-    if (seller?.walletAmount < companyPrice) {
+    if (seller?.walletAmount < cardPrice) {
       res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
