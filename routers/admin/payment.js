@@ -289,7 +289,7 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
   }
 });
 
-router.get("/info/:agentId", async (req, res) => {
+router.get("/info/agent/:agentId", async (req, res) => {
   const { agentId } = req.params;
 
   const payments = await prisma.payment.findMany({
@@ -302,10 +302,10 @@ router.get("/info/:agentId", async (req, res) => {
   let cards = payments.map((el) => ({
     title: el?.item[0]?.details?.title,
     qty: el?.qty,
-    sellerPayments: el?.price * el?.qty,
+    // sellerPayments: el?.price * el?.qty,
     agentPayments: el?.companyPrice * el?.qty,
     // providerPayments: el?.localCard?.companyPrice * el?.qty,
-    sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
+    // sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
     agentProfit:
       el?.companyPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
   }));
@@ -324,9 +324,9 @@ router.get("/info/:agentId", async (req, res) => {
         };
       }
       acc[card.title].qty += card.qty;
-      acc[card.title].sellerPayments += card.sellerPayments;
+      // acc[card.title].sellerPayments += card.sellerPayments;
       acc[card.title].agentPayments += card.agentPayments;
-      acc[card.title].sellerProfit += card.sellerProfit;
+      // acc[card.title].sellerProfit += card.sellerProfit;
       acc[card.title].agentProfit += card.agentProfit;
       // acc[card.title].providerPayments += card.providerPayments;
       return acc;
