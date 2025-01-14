@@ -202,7 +202,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     const cardPrice = card?.price;
     const companyPrice = card?.sellerPrice;
 
-    if (seller.walletAmount < (cardPrice * quantity || 1)) {
+    if (seller.walletAmount < (companyPrice * quantity || 1)) {
       return res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
