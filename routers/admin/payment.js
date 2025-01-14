@@ -408,8 +408,8 @@ router.get("/info/agent/:agentId", async (req, res) => {
 
   if (parsedStartDate && parsedEndDate) {
     whereCondition.createtAt = {
-      gte: parsedStartDate,  
-      lte: parsedEndDate,   
+      gte: parsedStartDate,
+      lte: parsedEndDate,
     };
   } else if (parsedStartDate) {
     whereCondition.createtAt = {
@@ -425,14 +425,20 @@ router.get("/info/agent/:agentId", async (req, res) => {
     where: whereCondition,
   });
 
-  let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
-  let cards = payments.map((el) => ({
-    title: el?.item[0]?.details?.title,
-    qty: el?.qty,
-    agentPayments: el?.localCard?.companyPrice * el?.qty,
-    agentProfit:
-      el?.localCard?.sellerPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
-  }));
+  let numberOfCards = payments.map((el) => el?.qty || 0).reduce((a, b) => a + b, 0);
+  let cards = payments.map((el) => {
+    const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
+    const details = item?.details || {};
+
+    return {
+      title: details?.title || "Unknown Title",
+      qty: el?.qty || 0,
+      agentPayments: (el?.localCard?.sellerPrice || 0) * (el?.qty || 0),
+      agentProfit:
+        (el?.localCard?.sellerPrice || 0) * (el?.qty || 0) -
+        (el?.localCard?.companyPrice || 0) * (el?.qty || 0),
+    };
+  });
 
   const groupedCards = Object.values(
     cards.reduce((acc, card) => {
@@ -480,36 +486,48 @@ router.get("/info/seller/:sellerId", async (req, res) => {
     };
   }
 
-  const payments = await prisma.payment.findMany({
-    where: whereCondition,
-  });
+  try {
+    const payments = await prisma.payment.findMany({
+      where: whereCondition,
+    });
 
-  let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
-  let cards = payments.map((el) => ({
-    title: el?.item[0]?.details?.title,
-    qty: el?.qty,
-    sellerPayments: el?.price * el?.qty,
-    sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
-  }));
+    let numberOfCards = payments.map((el) => el?.qty || 0).reduce((a, b) => a + b, 0);
 
-  const groupedCards = Object.values(
-    cards.reduce((acc, card) => {
-      if (!acc[card.title]) {
-        acc[card.title] = {
-          title: card.title,
-          qty: 0,
-          sellerPayments: 0,
-          sellerProfit: 0,
-        };
-      }
-      acc[card.title].qty += card.qty;
-      acc[card.title].sellerPayments += card.sellerPayments;
-      acc[card.title].sellerProfit += card.sellerProfit;
-      return acc;
-    }, {})
-  );
+    let cards = payments.map((el) => {
+      const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
+      const details = item?.details || {};
 
-  res.json({ success: true, numberOfCards, cards: groupedCards });
+      return {
+        title: details?.title || "Unknown Title",
+        qty: el?.qty || 0,
+        sellerPayments: (el?.price || 0) * (el?.qty || 0),
+        sellerProfit:
+          ((el?.price || 0) - (el?.companyPrice || 0)) * (el?.qty || 0),
+      };
+    });
+
+    const groupedCards = Object.values(
+      cards.reduce((acc, card) => {
+        if (!acc[card.title]) {
+          acc[card.title] = {
+            title: card.title,
+            qty: 0,
+            sellerPayments: 0,
+            sellerProfit: 0,
+          };
+        }
+        acc[card.title].qty += card.qty;
+        acc[card.title].sellerPayments += card.sellerPayments;
+        acc[card.title].sellerProfit += card.sellerProfit;
+        return acc;
+      }, {})
+    );
+
+    res.json({ success: true, numberOfCards, cards: groupedCards });
+  } catch (error) {
+    console.error("Error fetching seller info:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
 });
 
 router.get("/info/provider/:providerId", async (req, res) => {
@@ -548,7 +566,6 @@ router.get("/info/provider/:providerId", async (req, res) => {
       ? payment?.item[0]?.details?.title 
       : payment?.item?.details?.title;
     
-    console.log("payment new", paymentTitle);
 
     if (!acc[key]) acc[key] = [];
     acc[key].push(payment);
