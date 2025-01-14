@@ -548,7 +548,7 @@ router.get("/info/provider/:providerId", async (req, res) => {
       ? payment?.item[0]?.details?.title 
       : payment?.item?.details?.title;
     
-    console.log("payment new", paymentTitle);
+    // console.log("payment new", paymentTitle);
 
     if (!acc[key]) acc[key] = [];
     acc[key].push(payment);
