@@ -2,7 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const sellerAuth = require("../../middleware/sellerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
-const agentAuth = require("../../middleware/agentAuth");
+// const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
 // Create Payment
