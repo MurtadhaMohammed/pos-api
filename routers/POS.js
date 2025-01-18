@@ -599,9 +599,9 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
       },
     });
 
-    // if (sellerId !== payment.seller) {
-    //   return res.status(401).json({ message: "لاتصير لوتي!" });
-    // }
+    if (!payment) {
+      return res.status(401).json({ message: "لاتصير لوتي!" });
+    }
 
     let items = Array.isArray(payment?.item) ? payment?.item : [payment?.item];
 
