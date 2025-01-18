@@ -582,12 +582,14 @@ router.post("/refresh", sellerAuth, async (req, res) => {
   }
 });
 
-router.get("/invoice/:id", async (req, res) => {
+router.get("/invoice/:id", sellerAuth, async (req, res) => {
   let id = req.params.id || 0;
+  const sellerId = req.user.sellerId;
   const width = 384;
   const padding = 0;
 
   try {
+   
     const payment = await prisma.payment.findUnique({
       where: {
         id: parseInt(id),
@@ -596,6 +598,10 @@ router.get("/invoice/:id", async (req, res) => {
         seller: true,
       },
     });
+
+    if (sellerId !== payment.seller) {
+      return res.status(401).json({ message: "لاتصير لوتي!" });
+    }
 
     let items = Array.isArray(payment?.item) ? payment?.item : [payment?.item];
 
