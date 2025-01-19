@@ -49,9 +49,29 @@ router.post("/", adminAuth, async (req, res) => {
 router.get("/", adminAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
-    const skip = parseInt(req.query.skip | 0);
-    const total = await prisma.provider.count();
+    const skip = parseInt(req.query.skip || 0);
+    const q = req.query.q || "";
+    const where = q
+      ? {
+          OR: [
+            {
+              name: {
+                contains: q,
+                mode: "insensitive",
+              },
+            },
+            {
+              phone: {
+                contains: q,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }
+      : {};
+    const total = await prisma.provider.count({ where });
     const providers = await prisma.provider.findMany({
+      where,
       include: {
         admin: true,
       },
