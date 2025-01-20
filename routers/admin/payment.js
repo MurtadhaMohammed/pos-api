@@ -99,82 +99,61 @@ router.post("/", sellerAuth, async (req, res) => {
 // Read all Payments
 router.get("/", dashboardAuth, async (req, res) => {
   try {
-    // Get the page and limit from query parameters, with default values
-    const q = req.query.q || undefined; // Default to page 1 if not provided
-    const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
-    const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
+    const q = req.query.q || undefined; 
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 10; 
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null; 
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null; 
     const { type, providerId, agentId } = req?.user;
     const isProvider = type === "PROVIDER";
     const isAgent = type === "AGENT";
 
     const where = isProvider
-      ? {
-          providerId: parseInt(providerId),
-        }
+      ? { providerId: parseInt(providerId) }
       : isAgent
-      ? {
-          agentId: parseInt(agentId),
-        }
+      ? { agentId: parseInt(agentId) }
       : {};
-    // Calculate the number of items to skip based on the page and limit
+
+    if (startDate && endDate) {
+      where.createtAt = {
+        gte: startDate, 
+        lte: endDate, 
+      };
+    }
+
     const skip = (page - 1) * limit;
 
-    let condetions = { ...where };
-
-    if (q && q.trim() !== "")
-      condetions = {
-        OR: [
-          {
-            item: {
-              path: ["code"],
-              string_contains: q,
-            },
-          },
-          {
-            seller: {
-              OR: [
-                {
-                  phone: {
-                    contains: q || undefined,
-                  },
-                },
-                {
-                  name: {
-                    contains: q || undefined,
-                  },
-                },
-              ],
-            },
-          },
-        ],
-        ...where,
-      };
-    // Fetch the total count of records to calculate total pages
     const totalPayments = await prisma.payment.count({
-      where: condetions,
+      where: where,
     });
 
-    // Fetch the payments with pagination
     const payments = await prisma.payment.findMany({
-      where: condetions,
+      where: where,
       include: {
         seller: true,
         provider: true,
         agent: true,
       },
-      skip: skip, // Skip the previous records
-      take: limit, // Limit the number of records fetched
+      skip: skip,
+      take: limit, 
       orderBy: {
         createtAt: "desc",
       },
     });
 
-    // Calculate total number of pages
+    const filteredPayments = q
+      ? payments.filter(
+          (payment) =>
+            payment.item.some((item) => item.code.includes(q)) || 
+            (payment.seller.name &&
+              payment.seller.name.toLowerCase().includes(q.toLowerCase())) 
+        )
+      : payments;
+
     const totalPages = Math.ceil(totalPayments / limit);
 
-    // Return paginated results
     res.json({
-      data: payments,
+      data: filteredPayments,
       totalItems: totalPayments,
       totalPages: totalPages,
       currentPage: page,

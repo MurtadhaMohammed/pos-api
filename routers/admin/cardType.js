@@ -20,12 +20,29 @@ router.post("/", adminAuth, async (req, res) => {
 router.get("/", adminAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
-    const skip = parseInt(req.query.skip | 0);
-    const total = await prisma.cardType.count();
+    const skip = parseInt(req.query.skip || 0);
+    const q = req.query.q || ""; 
+
+    const where = q
+      ? {
+          name: {
+            contains: q, 
+            mode: "insensitive",
+          },
+        }
+      : {};
+
+    const total = await prisma.cardType.count({ where });
+
     const cardTypes = await prisma.cardType.findMany({
+      where,
       take,
       skip,
+      orderBy: {
+        name: "asc", 
+      },
     });
+
     res.json({ data: cardTypes, total });
   } catch (error) {
     res.status(500).json({ error: error.message });

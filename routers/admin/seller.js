@@ -56,20 +56,37 @@ router.post("/", dashboardAuth, async (req, res) => {
 // Get all sellers
 router.get("/", dashboardAuth, async (req, res) => {
   const take = parseInt(req.query.take || 8);
-  const skip = parseInt(req.query.skip | 0);
+  const skip = parseInt(req.query.skip || 0);
   const { type, providerId, agentId } = req?.user;
   const isProvider = type === "PROVIDER";
   const isAgent = type === "AGENT";
+  const searchQuery = req.query.q || ""; 
 
-  const where = isProvider
-    ? {
-        providerId: parseInt(providerId),
-      }
-    : isAgent
-    ? {
-        agentId: parseInt(agentId),
-      }
-    : {};
+  const where = {
+    AND: [
+      isProvider
+        ? { providerId: parseInt(providerId) }
+        : isAgent
+        ? { agentId: parseInt(agentId) }
+        : {},
+      {
+        OR: [
+          {
+            name: {
+              contains: searchQuery, 
+              mode: "insensitive",
+            },
+          },
+          {
+            phone: {
+              contains: searchQuery, 
+              mode: "insensitive", 
+            },
+          },
+        ],
+      },
+    ],
+  };
 
   const total = await prisma.seller.count({ where });
   const sellers = await prisma.seller.findMany({
@@ -85,9 +102,10 @@ router.get("/", dashboardAuth, async (req, res) => {
       createtAt: "desc",
     },
   });
+
   res.json({ data: sellers, total });
-  // res.json(sellers);
 });
+
 
 // Update seller
 router.put("/:id", dashboardAuth, async (req, res) => {
