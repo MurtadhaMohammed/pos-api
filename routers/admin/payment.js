@@ -123,10 +123,6 @@ router.get("/", dashboardAuth, async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const totalPayments = await prisma.payment.count({
-      where: where,
-    });
-
     const payments = await prisma.payment.findMany({
       where: where,
       include: {
@@ -134,8 +130,6 @@ router.get("/", dashboardAuth, async (req, res) => {
         provider: true,
         agent: true,
       },
-      skip: skip,
-      take: limit, 
       orderBy: {
         createtAt: "desc",
       },
@@ -144,17 +138,21 @@ router.get("/", dashboardAuth, async (req, res) => {
     const filteredPayments = q
       ? payments.filter(
           (payment) =>
-            payment.item.some((item) => item.code.includes(q)) || 
-            (payment.seller.name &&
-              payment.seller.name.toLowerCase().includes(q.toLowerCase())) 
+            Array.isArray(payment.item) &&
+            payment.item.some((item) => item.code.includes(q)) ||
+            (payment.seller?.name &&
+              payment.seller.name.toLowerCase().includes(q.toLowerCase()))
         )
       : payments;
 
-    const totalPages = Math.ceil(totalPayments / limit);
+    const totalItems = filteredPayments.length;
+    const paginatedPayments = filteredPayments.slice(skip, skip + limit);
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     res.json({
-      data: filteredPayments,
-      totalItems: totalPayments,
+      data: paginatedPayments,
+      totalItems: totalItems,
       totalPages: totalPages,
       currentPage: page,
       pageSize: limit,

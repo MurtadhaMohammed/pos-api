@@ -120,10 +120,19 @@ router.delete("/:id", adminAuth, async (req, res) => {
 });
 
 router.post("/cardHolder", dashboardAuth, async (req, res) => {
-  const { companyCardTypeId, sellerId } = req.body;
+  const { companyCardTypeId, quantity, sellerId } = req.body;
+
+  console.log(req?.body);
+
   if (!companyCardTypeId) {
     return res.status(400).json({ message: "companyCardTypeId is required" });
   }
+
+  const qty = Math.min(quantity || 1, 100);
+
+  if (quantity > 100) {
+    return res.status(400).json({ error: "Maximum quantity is 100." });
+  }  
 
   try {
     const card = await prisma.card.findFirst({
@@ -149,10 +158,16 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
       });
     }
 
-    const cardPrice = card?.price ;
-    const companyPrice = card?.companyPrice
+    if (!card) {
+      return res.status(500).json({
+        error: "No card found!",
+      });
+    }
 
-    if (seller.walletAmount < cardPrice) {
+    const cardPrice = card?.price;
+    const companyPrice = card?.companyPrice;
+
+    if (seller.walletAmount < cardPrice * qty) {
       return res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
@@ -162,6 +177,7 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
     // Make a request to the external API
     const formdata = new FormData();
     formdata.append("companyCardTypeId", companyCardTypeId);
+    formdata.append("quantity", qty);
 
     const response = await fetch(
       "https://client.nojoomalrabiaa.com/api/client/hold-card",
@@ -196,7 +212,8 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
 });
 
 router.post("/purchase", dashboardAuth, async (req, res) => {
-  const { hold_id, sellerId, providerCardID, providerId } = req.body;
+  const { hold_id, sellerId, providerCardID, providerId, quantity = 1, bulk } = req.body;
+
   if (!hold_id) {
     return res.status(400).json({ message: "hold_id is required" });
   }
@@ -214,19 +231,29 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
       },
     });
 
+    if (!seller) {
+      return res.status(404).json({ message: "Seller not found" });
+    }
+
     const cardPrice = card?.price;
     const companyPrice = card?.companyPrice;
+    const totalCost = companyPrice * quantity;
 
-    if (seller?.walletAmount < cardPrice) {
-      res.status(500).json({
+
+    if (seller?.walletAmount < totalCost) {
+      return res.status(500).json({
         walletAmount: seller.walletAmount,
         error: "Your wallet is not enough!",
       });
     }
 
-    // Make a request to the external API
     const formdata = new FormData();
     formdata.append("hold_id", hold_id);
+    formdata.append("quantity", quantity);
+
+    if (bulk) {
+      formdata.append("bulk", bulk);
+    }
 
     const response = await fetch(
       "https://client.nojoomalrabiaa.com/api/client/purchase",
@@ -241,18 +268,25 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     );
 
     let data = await response.json();
-    if (response.status === 200) {
+
+    console.log(data)
+
+    if (response.status === 200 && bulk) {
+      if (data?.transaction) {
+        console.log("Bulk purchase data:", data.transaction);
+      }
+      data.seller = {
+        id: seller.id,
+        name: seller.name,
+        username: seller.username,
+        phone:seller.phone
+      };
+    } else if (response.status === 200 && Array.isArray(data)) {
       data = data[0];
     }
 
     let payment;
     if (!data.error) {
-      // const card = await prisma.card.findUnique({
-      //   where: {
-      //     id: parseInt(providerCardID),
-      //   },
-      // });
-
       payment = await prisma.payment.create({
         data: {
           provider: {
@@ -261,13 +295,12 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
-          agentId: seller?.agentId || null,
-          companyCardID: data?.id,
+          companyCardID: bulk ? data?.companyCardID : data?.id,
           price: cardPrice,
           companyPrice,
-          qty: 1,
+          qty: quantity || 1,
           providerCardID: parseInt(providerCardID),
-          item: data,
+          item: bulk? data?.cards : data,
         },
       });
 
@@ -276,16 +309,15 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - companyPrice,
-          paymentAmount: seller.paymentAmount + companyPrice,
+          walletAmount: seller.walletAmount - totalCost,
+          paymentAmount: seller.paymentAmount + totalCost,
         },
       });
     }
 
     // Send back the response from the external API
-    res.status(response.status).json({ ...data, paymentId: payment?.id });
+    res.status(response.status).json({ ...data, paymentId: payment?.id, totalCost:totalCost });
   } catch (error) {
-    // Handle errors appropriately
     console.error("Error making request to external API:", error.message);
     res.status(500).json({
       message: "Error making request to external API",
