@@ -7,10 +7,10 @@ const router = express.Router();
 
 // Create Card
 router.post("/", adminAuth, async (req, res) => {
-  const { price, providerId, cardTypeId, companyPrice , sellerPrice } = req.body;
+  const { price, providerId, cardTypeId, companyPrice, sellerPrice } = req.body;
   try {
     const card = await prisma.card.create({
-      data: { price, providerId, cardTypeId, companyPrice , sellerPrice },
+      data: { price, providerId, cardTypeId, companyPrice, sellerPrice },
     });
     res.json(card);
   } catch (error) {
@@ -132,7 +132,7 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
 
   if (quantity > 100) {
     return res.status(400).json({ error: "Maximum quantity is 100." });
-  }  
+  }
 
   try {
     const card = await prisma.card.findFirst({
@@ -212,7 +212,14 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
 });
 
 router.post("/purchase", dashboardAuth, async (req, res) => {
-  const { hold_id, sellerId, providerCardID, providerId, quantity = 1, bulk } = req.body;
+  const {
+    hold_id,
+    sellerId,
+    providerCardID,
+    providerId,
+    quantity = 1,
+    bulk,
+  } = req.body;
 
   if (!hold_id) {
     return res.status(400).json({ message: "hold_id is required" });
@@ -238,7 +245,6 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     const cardPrice = card?.price;
     const companyPrice = card?.companyPrice;
     const totalCost = companyPrice * quantity;
-
 
     if (seller?.walletAmount < totalCost) {
       return res.status(500).json({
@@ -269,24 +275,8 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
 
     let data = await response.json();
 
-    console.log(data)
-
-    if (response.status === 200 && bulk) {
-      if (data?.transaction) {
-        console.log("Bulk purchase data:", data.transaction);
-      }
-      data.seller = {
-        id: seller.id,
-        name: seller.name,
-        username: seller.username,
-        phone:seller.phone
-      };
-    } else if (response.status === 200 && Array.isArray(data)) {
-      data = data[0];
-    }
-
     let payment;
-    if (!data.error) {
+    if (response.status === 200 && !data.error) {
       payment = await prisma.payment.create({
         data: {
           provider: {
@@ -295,12 +285,12 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
-          companyCardID: bulk ? data?.companyCardID : data?.id,
+          companyCardID: data[0]?.id,
           price: cardPrice,
           companyPrice,
           qty: quantity || 1,
           providerCardID: parseInt(providerCardID),
-          item: bulk? data?.cards : data,
+          item: data,
         },
       });
 
@@ -316,7 +306,9 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     }
 
     // Send back the response from the external API
-    res.status(response.status).json({ ...data, paymentId: payment?.id, totalCost:totalCost });
+    res
+      .status(response.status)
+      .json({ ...data, paymentId: payment?.id, totalCost: totalCost });
   } catch (error) {
     console.error("Error making request to external API:", error.message);
     res.status(500).json({
