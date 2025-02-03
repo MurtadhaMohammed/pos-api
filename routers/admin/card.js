@@ -122,8 +122,6 @@ router.delete("/:id", adminAuth, async (req, res) => {
 router.post("/cardHolder", dashboardAuth, async (req, res) => {
   const { companyCardTypeId, quantity, sellerId } = req.body;
 
-  console.log(req?.body);
-
   if (!companyCardTypeId) {
     return res.status(400).json({ message: "companyCardTypeId is required" });
   }
@@ -145,6 +143,10 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
         },
       },
     });
+
+    if (!sellerId){
+      return res.status(400).json({ error: "Seller Id missing" });
+    }
 
     const seller = await prisma.seller.findUnique({
       where: {
@@ -218,6 +220,10 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     return res.status(400).json({ message: "hold_id is required" });
   }
 
+  if (!sellerId){
+    return res.status(400).json({ error: "Seller Id missing" });
+  }
+
   try {
     const card = await prisma.card.findUnique({
       where: {
@@ -269,12 +275,7 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
 
     let data = await response.json();
 
-    console.log(data)
-
     if (response.status === 200 && bulk) {
-      if (data?.transaction) {
-        console.log("Bulk purchase data:", data.transaction);
-      }
       data.seller = {
         id: seller.id,
         name: seller.name,
@@ -283,6 +284,15 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
       };
     } else if (response.status === 200 && Array.isArray(data)) {
       data = data[0];
+    }
+
+    let itemsArray = [];
+    if (response.status === 200) {
+      if (Array.isArray(data)) {
+        itemsArray = data;
+      } else {
+        itemsArray = [data]; 
+      }
     }
 
     let payment;
@@ -295,12 +305,12 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
-          companyCardID: bulk ? data?.companyCardID : data?.id,
+          companyCardID: bulk? data?.[0]?.id : data?.id,
           price: cardPrice,
           companyPrice,
           qty: quantity || 1,
           providerCardID: parseInt(providerCardID),
-          item: bulk? data?.cards : data,
+          item: itemsArray,
         },
       });
 
