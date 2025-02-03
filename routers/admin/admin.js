@@ -44,22 +44,38 @@ router.post("/login", async (req, res) => {
       where: { username },
       include: { provider: true, agent: true },
     });
-    if (admin && (await bcrypt.compare(password, admin.password))) {
-      const token = jwt.sign(
-        {
-          id: admin.id,
-          username: admin.username,
-          type: admin.type,
-          providerId: admin?.provider?.id,
-          agentId: admin?.agent?.id,
-        },
-        JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-      res.json({ message: "Login successful", token });
-    } else {
-      res.status(401).json({ error: "Invalid username or password" });
+
+    if (!admin) {
+      return res.status(401).json({ error: "Invalid username or password" });
     }
+
+    if (admin.provider && !admin.provider.active) {
+      return res.status(403).json({ error: "Provider account is not active" });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, admin.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    // Generate JWT Token
+    const tokenPayload = {
+      id: admin.id,
+      username: admin.username,
+      type: admin.type,
+      providerId: admin?.provider?.id,
+      agentId: admin?.agent?.id,
+    };
+    
+    if (admin.type === "PROVIDER") {
+      tokenPayload.active = admin.provider.active;
+    }
+    
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "1h" });
+    
+
+    res.json({ message: "Login successful", token });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
