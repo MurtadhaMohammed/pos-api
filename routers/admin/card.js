@@ -4,6 +4,9 @@ const adminAuth = require("../../middleware/adminAuth");
 const providerAuth = require("../../middleware/providerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
 const router = express.Router();
+const FormData = require("form-data");
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 // Create Card
 router.post("/", adminAuth, async (req, res) => {
@@ -168,6 +171,7 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
 
     const cardPrice = card?.price;
     const companyPrice = card?.companyPrice;
+    const sellerPrice = card?.sellerPrice;
 
     if (seller.walletAmount < cardPrice * qty) {
       return res.status(500).json({
@@ -200,6 +204,7 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
         walletAmount: seller.walletAmount,
         price: cardPrice,
         companyPrice,
+        sellerPrice,
       };
     }
     res.status(response.status).json(data);
@@ -213,63 +218,49 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
   }
 });
 
-router.post("/purchase", dashboardAuth, async (req, res) => {
-  const {
-    hold_id,
-    sellerId,
-    providerCardID,
-    providerId,
-    quantity = 1,
-    bulk,
-  } = req.body;
+router.post("/purchase", providerAuth, async (req, res) => {
+  const { hold_id, providerCardID, providerId, sellerId } = req.body;
 
   if (!hold_id) {
     return res.status(400).json({ message: "hold_id is required" });
   }
 
-  if (!sellerId) {
-    return res.status(400).json({ error: "Seller Id missing" });
-  }
-
   try {
-    const card = await prisma.card.findUnique({
-      where: {
-        id: Number(providerCardID),
-      },
-    });
-
     const seller = await prisma.seller.findUnique({
       where: {
         id: Number(sellerId),
       },
     });
 
-    if (!seller) {
-      return res.status(404).json({ message: "Seller not found" });
+    const hasAgent = !!seller?.agentId;
+    const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
+      where: {
+        id: Number(providerCardID), // also agent card id if has agent
+        providerId: parseInt(providerId),
+        ...(hasAgent ? { agentId: seller?.agentId } : {}),
+      },
+      ...(hasAgent
+        ? {
+            include: {
+              card: true,
+            },
+          }
+        : {}),
+    });
+
+    if (!card) {
+      return res.status(404).json({ error: "Card Not Found!." });
     }
 
     const cardPrice = card?.price;
-    const companyPrice = card?.companyPrice;
-    const totalCost = companyPrice * quantity;
+    const companyPrice = card?.sellerPrice;
 
-    if (seller?.walletAmount < totalCost) {
-      return res.status(500).json({
-        walletAmount: seller.walletAmount,
-        error: "Your wallet is not enough!",
-      });
-    }
-
+    // Make a request to the external API
     const formdata = new FormData();
     formdata.append("hold_id", hold_id);
-    formdata.append("quantity", quantity);
-
-    if (bulk) {
-      formdata.append("bulk", bulk);
-    }
 
     const response = await fetch(
       "https://client.nojoomalrabiaa.com/api/client/purchase",
-      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
       {
         method: "POST",
         headers: {
@@ -282,7 +273,7 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     let data = await response.json();
 
     let payment;
-    if (response.status === 200 && !data.error) {
+    if (response.status === 200 && !data[0].error) {
       payment = await prisma.payment.create({
         data: {
           provider: {
@@ -291,31 +282,59 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
           seller: {
             connect: { id: parseInt(sellerId) },
           },
+          agent: seller?.agentId
+            ? {
+                connect: { id: seller.agentId }, // Use the relationship here
+              }
+            : undefined, // Leave undefined if no agent
           companyCardID: data[0]?.id,
           price: cardPrice,
           companyPrice,
-          qty: quantity || 1,
+          localCard: card,
+          qty: data?.length,
           providerCardID: parseInt(providerCardID),
           item: data,
         },
       });
 
-      await prisma.seller.update({
+      const updatedSeller = await prisma.seller.update({
         where: {
           id: parseInt(sellerId),
         },
         data: {
-          walletAmount: seller.walletAmount - totalCost,
-          paymentAmount: seller.paymentAmount + totalCost,
+          walletAmount: {
+            decrement: companyPrice * data?.length,
+          },
+          paymentAmount: {
+            increment: companyPrice * data?.length,
+          },
         },
       });
+
+      let item = payment?.item[0];
+      let code = payment?.item?.map((d) => d.code);
+
+      resp = {
+        id: item?.id,
+        paymentId: payment?.id,
+        price: payment?.price,
+        qty: payment?.qty,
+        createdAt: payment?.createtAt,
+        walletAmount: updatedSeller?.walletAmount,
+        code,
+        name: item?.details?.title,
+        totalCost: companyPrice * payment?.qty,
+        seller: seller,
+      };
+
+      res.status(200).json(resp);
+    } else {
+      res.status(response.status).json(data[0]);
     }
 
     // Send back the response from the external API
-    res
-      .status(response.status)
-      .json({ ...data, paymentId: payment?.id, totalCost: totalCost });
   } catch (error) {
+    // Handle errors appropriately
     console.error("Error making request to external API:", error.message);
     res.status(500).json({
       message: "Error making request to external API",
@@ -323,5 +342,113 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
     });
   }
 });
+
+// router.post("/purchase", dashboardAuth, async (req, res) => {
+//   const {
+//     hold_id,
+//     sellerId,
+//     providerCardID,
+//     providerId,
+//     quantity = 1,
+//   } = req.body;
+
+//   console.log(providerCardID);
+
+//   if (!hold_id) {
+//     return res.status(400).json({ message: "hold_id is required" });
+//   }
+
+//   if (!sellerId) {
+//     return res.status(400).json({ error: "Seller Id missing" });
+//   }
+
+//   try {
+//     const card = await prisma.card.findUnique({
+//       where: {
+//         id: Number(providerCardID),
+//       },
+//     });
+
+//     const seller = await prisma.seller.findUnique({
+//       where: {
+//         id: Number(sellerId),
+//       },
+//     });
+
+//     if (!seller) {
+//       return res.status(404).json({ message: "Seller not found" });
+//     }
+
+//     const cardPrice = card?.price;
+//     const companyPrice = card?.companyPrice;
+//     const totalCost = companyPrice * quantity;
+
+//     if (seller?.walletAmount < totalCost) {
+//       return res.status(500).json({
+//         walletAmount: seller.walletAmount,
+//         error: "Your wallet is not enough!",
+//       });
+//     }
+
+//     const formdata = new FormData();
+//     formdata.append("hold_id", hold_id);
+//     formdata.append("quantity", quantity);
+
+//     const response = await fetch(
+//       "https://client.nojoomalrabiaa.com/api/client/purchase",
+//       // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
+//       {
+//         method: "POST",
+//         headers: {
+//           Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+//         },
+//         body: formdata,
+//       }
+//     );
+
+//     let data = await response.json();
+
+//     let payment;
+//     if (response.status === 200 && !data.error) {
+//       payment = await prisma.payment.create({
+//         data: {
+//           provider: {
+//             connect: { id: parseInt(providerId) },
+//           },
+//           seller: {
+//             connect: { id: parseInt(sellerId) },
+//           },
+//           companyCardID: data[0]?.id,
+//           price: cardPrice,
+//           companyPrice,
+//           qty: quantity || 1,
+//           providerCardID: parseInt(providerCardID),
+//           item: data,
+//         },
+//       });
+
+//       await prisma.seller.update({
+//         where: {
+//           id: parseInt(sellerId),
+//         },
+//         data: {
+//           walletAmount: seller.walletAmount - totalCost,
+//           paymentAmount: seller.paymentAmount + totalCost,
+//         },
+//       });
+//     }
+
+//     // Send back the response from the external API
+//     res
+//       .status(response.status)
+//       .json({ ...data, paymentId: payment?.id, totalCost: totalCost });
+//   } catch (error) {
+//     console.error("Error making request to external API:", error.message);
+//     res.status(500).json({
+//       message: "Error making request to external API",
+//       error: error.message,
+//     });
+//   }
+// });
 
 module.exports = router;
