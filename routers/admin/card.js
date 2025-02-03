@@ -122,8 +122,6 @@ router.delete("/:id", adminAuth, async (req, res) => {
 router.post("/cardHolder", dashboardAuth, async (req, res) => {
   const { companyCardTypeId, quantity, sellerId } = req.body;
 
-  console.log(req?.body);
-
   if (!companyCardTypeId) {
     return res.status(400).json({ message: "companyCardTypeId is required" });
   }
@@ -145,6 +143,10 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
         },
       },
     });
+
+    if (!sellerId) {
+      return res.status(400).json({ error: "Seller Id missing" });
+    }
 
     const seller = await prisma.seller.findUnique({
       where: {
@@ -223,6 +225,10 @@ router.post("/purchase", dashboardAuth, async (req, res) => {
 
   if (!hold_id) {
     return res.status(400).json({ message: "hold_id is required" });
+  }
+
+  if (!sellerId) {
+    return res.status(400).json({ error: "Seller Id missing" });
   }
 
   try {
