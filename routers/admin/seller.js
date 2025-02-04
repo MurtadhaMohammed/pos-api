@@ -24,16 +24,15 @@ router.post("/", dashboardAuth, async (req, res) => {
 
     let agentData = null;
 
-  if (agentId){
-    const agent = await prisma.agent.findUnique({
-      where: {
-        id: agentId,
-      },
-    });
+    if (agentId) {
+      const agent = await prisma.agent.findUnique({
+        where: {
+          id: agentId,
+        },
+      });
 
-    agentData = agent
-  }
-    
+      agentData = agent;
+    }
 
     const seller = await prisma.seller.create({
       data: {
@@ -60,27 +59,30 @@ router.get("/", dashboardAuth, async (req, res) => {
   const { type, providerId, agentId } = req?.user;
   const isProvider = type === "PROVIDER";
   const isAgent = type === "AGENT";
-  const searchQuery = req.query.q || ""; 
+  const searchQuery = req.query.q || "";
 
   const where = {
     AND: [
-      isProvider
+      isProvider && !req.query.providerId
         ? { providerId: parseInt(providerId) }
         : isAgent
         ? { agentId: parseInt(agentId) }
         : {},
       {
+        providerId: parseInt(req.query.providerId || 0),
+      },
+      {
         OR: [
           {
             name: {
-              contains: searchQuery, 
+              contains: searchQuery,
               mode: "insensitive",
             },
           },
           {
             phone: {
-              contains: searchQuery, 
-              mode: "insensitive", 
+              contains: searchQuery,
+              mode: "insensitive",
             },
           },
         ],
@@ -105,7 +107,6 @@ router.get("/", dashboardAuth, async (req, res) => {
 
   res.json({ data: sellers, total });
 });
-
 
 // Update seller
 router.put("/:id", dashboardAuth, async (req, res) => {
