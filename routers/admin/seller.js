@@ -69,7 +69,7 @@ router.get("/", dashboardAuth, async (req, res) => {
         ? { agentId: parseInt(agentId) }
         : {},
       {
-        providerId: parseInt(req.query.providerId || 0),
+        providerId: parseInt(req?.query?.providerId || 0) || undefined,
       },
       {
         OR: [
