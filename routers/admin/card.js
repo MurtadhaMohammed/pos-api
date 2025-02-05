@@ -95,14 +95,24 @@ router.get("/:providerId/:cardTypeId", async (req, res) => {
 // Update Card by ID
 router.put("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
-  const { price, providerId, cardTypeId, companyPrice, sellerPrice } = req.body;
+  const { price, providerId, cardTypeId, companyPrice, sellerPrice , active } = req.body;
   const { type } = req?.user;
   const isProvider = type === "PROVIDER";
+  
   try {
+
+    const currentCard = await prisma.card.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!currentCard) {
+      return res.status(404).json({ error: "Card not found" });
+    }
+
     const card = await prisma.card.update({
       where: { id: Number(id) },
       data: isProvider
-        ? { price, sellerPrice }
+        ? { price, sellerPrice , active: !currentCard.active }
         : { price, providerId, cardTypeId, companyPrice, sellerPrice },
     });
     res.json(card);
@@ -141,6 +151,7 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
         cardType: true,
       },
       where: {
+        active: true,
         cardType: {
           companyCardID: parseInt(companyCardTypeId),
         },

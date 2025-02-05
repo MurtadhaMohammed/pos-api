@@ -111,11 +111,11 @@ router.get("/", dashboardAuth, async (req, res) => {
 // Update seller
 router.put("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, username, address, phone, providerId, agentId } = req.body;
+  const { name, username, address, phone} = req.body;
 
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
-    data: { name, username, address, phone, providerId, agentId },
+    data: { name, username, address, phone},
   });
 
   res.json(seller);

@@ -142,19 +142,22 @@ router.get("/", dashboardAuth, async (req, res) => {
     });
 
     const filteredPayments = q
-      ? payments.filter(
-          (payment) =>
-            payment.item.some((item) => item.code.includes(q)) || 
-            (payment.seller.name &&
-              payment.seller.name.toLowerCase().includes(q.toLowerCase())) 
-        )
+      ? payments.filter((payment) => {
+          const items = Array.isArray(payment.item) ? payment.item : [payment.item];
+          return items.some((item) => item.code && item.code.includes(q)) ||
+                 (payment.seller.name && payment.seller.name.toLowerCase().includes(q.toLowerCase()));
+        })
       : payments;
 
-    const totalPages = Math.ceil(totalPayments / limit);
+
+    const totalPages = Math.ceil(filteredPayments.length / limit);
+
+    const totalItems = q ? filteredPayments.length : totalPayments;
+
 
     res.json({
       data: filteredPayments,
-      totalItems: totalPayments,
+      totalItems: totalItems,
       totalPages: totalPages,
       currentPage: page,
       pageSize: limit,

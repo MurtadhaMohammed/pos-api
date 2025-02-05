@@ -181,10 +181,11 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     const hasAgent = !!seller?.agentId;
 
     const card = await prisma[hasAgent ? "agentCard" : "card"].findFirst({
-      include: {
+      include: { 
         cardType: true,
       },
       where: {
+        active: true,
         providerId: seller?.providerId,
         cardType: {
           companyCardID: parseInt(companyCardTypeId),
@@ -195,7 +196,7 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
 
     if (!card) {
       return res.status(500).json({
-        error: "No card found!",
+        error: "No card found or card not active!",
       });
     }
 
