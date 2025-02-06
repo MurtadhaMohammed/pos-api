@@ -67,10 +67,6 @@ router.post("/login", async (req, res) => {
       agentId: admin?.agent?.id,
     };
     
-    if (admin.type === "PROVIDER") {
-      tokenPayload.active = admin.provider.active;
-    }
-    
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "1h" });
     
 

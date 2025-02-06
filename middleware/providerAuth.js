@@ -1,13 +1,15 @@
 const jwt = require("jsonwebtoken");
+const prisma = require("../prismaClient");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
-const providerAuth = (req, res, next) => {
+const providerAuth = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.sendStatus(401); 
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, async (err, decodedUser) => {
     if (err) {
       if (err.name === "TokenExpiredError") {
         return res.status(403).json({ error: "JWT token has expired" });
@@ -15,16 +17,33 @@ const providerAuth = (req, res, next) => {
       return res.sendStatus(403); 
     }
 
-    if (user.type !== "ADMIN" && user.type !== "PROVIDER") {
-      return res.status(403).json({ error: "You do not have permission to perform this action" });
-    }
+    try {
+      const user = await prisma.user.findFirst({
+        where: { id: decodedUser.id },
+        select: { id: true, type: true },
+      });
 
-    if (user.type === "PROVIDER" && !user.active) {
-      return res.status(403).json({ error: "Provider account is not active" });
-    }
+      if (!user) {
+        return res.status(404).json({ error: "User not found!" });
+      }
 
-    req.user = user;
-    next();
+      if (user.type === "PROVIDER") {
+        const provider = await prisma.provider.findUnique({
+          where: { userId: user.id },
+          select: { id: true, active: true },
+        });
+
+        if (!provider || !provider.active) {
+          return res.status(403).json({ error: "Provider account is not active" });
+        }
+      }
+
+      req.user = decodedUser;
+      next();
+    } catch (dbError) {
+      console.error("Database error:", dbError);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 };
 
