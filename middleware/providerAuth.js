@@ -14,11 +14,10 @@ const providerAuth = async (req, res, next) => {
       if (err.name === "TokenExpiredError") {
         return res.status(403).json({ error: "JWT token has expired" });
       }
-      return res.sendStatus(403); 
+      return res.sendStatus(403);
     }
-
     try {
-      const user = await prisma.user.findFirst({
+      const user = await prisma.admin.findFirst({
         where: { id: decodedUser.id },
         select: { id: true, type: true },
       });
@@ -29,12 +28,14 @@ const providerAuth = async (req, res, next) => {
 
       if (user.type === "PROVIDER") {
         const provider = await prisma.provider.findUnique({
-          where: { userId: user.id },
+          where: { userId: user.providerId },
           select: { id: true, active: true },
         });
 
         if (!provider || !provider.active) {
-          return res.status(403).json({ error: "Provider account is not active" });
+          return res
+            .status(403)
+            .json({ error: "Provider account is not active" });
         }
       }
 
