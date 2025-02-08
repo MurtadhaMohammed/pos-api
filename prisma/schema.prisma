@@ -27,6 +27,7 @@ model Provider {
   createtAt      DateTime         @default(now())
   active         Boolean          @default(true)
   walletAmount   Float            @default(0)
+  roles          Json?
   agents         Agent[]
   agentCards     AgentCard[]
   cards          Card[]
