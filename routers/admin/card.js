@@ -21,6 +21,33 @@ router.post("/", adminAuth, async (req, res) => {
   }
 });
 
+const getPlanDetails = async (cards) => {
+  const raw = JSON.stringify({
+    planIds: cards.map((el) => el?.cardType?.companyCardID),
+  });
+
+  const response = await fetch(
+    "https://client.nojoomalrabiaa.com/api/client/plan-details",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+      },
+      body: raw,
+    }
+  );
+  const jsonResp = await response.json();
+  let list = cards?.map((el) => {
+    el.count = jsonResp?.find(
+      (plan) => plan?.planId === el?.cardType?.companyCardID
+    )?.count;
+    return el;
+  });
+
+  return list || [];
+};
+
 // Read all Cards
 router.get("/", dashboardAuth, async (req, res) => {
   try {
@@ -62,7 +89,9 @@ router.get("/", dashboardAuth, async (req, res) => {
         createtAt: "desc",
       },
     });
-    res.json({ data: cards, total, provider });
+
+    let list = await getPlanDetails(cards);
+    res.json({ data: list, total, provider });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -95,12 +124,12 @@ router.get("/:providerId/:cardTypeId", async (req, res) => {
 // Update Card by ID
 router.put("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
-  const { price, providerId, cardTypeId, companyPrice, sellerPrice , active } = req.body;
+  const { price, providerId, cardTypeId, companyPrice, sellerPrice, active } =
+    req.body;
   const { type } = req?.user;
   const isProvider = type === "PROVIDER";
-  
-  try {
 
+  try {
     const currentCard = await prisma.card.findUnique({
       where: { id: Number(id) },
     });
@@ -112,7 +141,7 @@ router.put("/:id", dashboardAuth, async (req, res) => {
     const card = await prisma.card.update({
       where: { id: Number(id) },
       data: isProvider
-        ? { price, sellerPrice , active: !currentCard.active }
+        ? { price, sellerPrice, active: !currentCard.active }
         : { price, providerId, cardTypeId, companyPrice, sellerPrice },
     });
     res.json(card);
