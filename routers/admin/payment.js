@@ -99,11 +99,13 @@ router.post("/", sellerAuth, async (req, res) => {
 // Read all Payments
 router.get("/", dashboardAuth, async (req, res) => {
   try {
-    const q = req.query.q || undefined; 
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 10; 
-    const startDate = req.query.startDate ? new Date(req.query.startDate) : null; 
-    const endDate = req.query.endDate ? new Date(req.query.endDate) : null; 
+    const q = req.query.q || undefined;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate)
+      : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
     const { type, providerId, agentId } = req?.user;
     const isProvider = type === "PROVIDER";
     const isAgent = type === "AGENT";
@@ -116,48 +118,68 @@ router.get("/", dashboardAuth, async (req, res) => {
 
     if (startDate && endDate) {
       where.createtAt = {
-        gte: startDate, 
-        lte: endDate, 
+        gte: startDate,
+        lte: endDate,
       };
     }
 
     const skip = (page - 1) * limit;
 
     const totalPayments = await prisma.payment.count({
-      where: where,
+      where: {
+        ...where,
+        OR: [
+          {
+            seller: {
+              name: {
+                contains: q,
+              },
+            },
+          },
+          {
+            item: {
+              array_contains: [{ code: q }],
+            },
+          },
+        ],
+      },
     });
 
     const payments = await prisma.payment.findMany({
-      where: where,
+      where: {
+        ...where,
+        OR: [
+          {
+            seller: {
+              name: {
+                contains: q,
+              },
+            },
+          },
+          {
+            item: {
+              array_contains: [{ code: q }],
+            },
+          },
+        ],
+      },
       include: {
         seller: true,
         provider: true,
         agent: true,
       },
       skip: skip,
-      take: limit, 
+      take: limit,
       orderBy: {
         createtAt: "desc",
       },
     });
 
-    const filteredPayments = q
-      ? payments.filter((payment) => {
-          const items = Array.isArray(payment.item) ? payment.item : [payment.item];
-          return items.some((item) => item.code && item.code.includes(q)) ||
-                 (payment.seller.name && payment.seller.name.toLowerCase().includes(q.toLowerCase()));
-        })
-      : payments;
-
-
-    const totalPages = Math.ceil(filteredPayments.length / limit);
-
-    const totalItems = q ? filteredPayments.length : totalPayments;
-
+    const totalPages = Math.ceil(totalPayments / limit);
 
     res.json({
-      data: filteredPayments,
-      totalItems: totalItems,
+      data: payments,
+      totalItems: totalPayments,
       totalPages: totalPages,
       currentPage: page,
       pageSize: limit,
@@ -310,25 +332,23 @@ router.get("/seller", async (req, res) => {
       totalCompanyPayment += payment.companyPrice * (payment.qty || 1);
     });
 
-    totalNetProfit =  totalPayment - totalCompanyPayment;
-
-
-
+    totalNetProfit = totalPayment - totalCompanyPayment;
 
     return res.status(200).json({
       sellerId: sellerId,
       startDate: startDate || "Not specified",
       endDate: endDate || "Not specified",
       totalPayment,
-      cashback:totalNetProfit,
-      payments
+      cashback: totalNetProfit,
+      payments,
     });
   } catch (error) {
     console.error("Error calculating payments:", error);
-    return res.status(500).json({ error: "An error occurred while calculating payments." });
+    return res
+      .status(500)
+      .json({ error: "An error occurred while calculating payments." });
   }
 });
-
 
 // router.get("/info/:agentId", async (req, res) => {
 //   const { agentId } = req.params;
@@ -407,7 +427,9 @@ router.get("/info/agent/:agentId", async (req, res) => {
     where: whereCondition,
   });
 
-  let numberOfCards = payments.map((el) => el?.qty || 0).reduce((a, b) => a + b, 0);
+  let numberOfCards = payments
+    .map((el) => el?.qty || 0)
+    .reduce((a, b) => a + b, 0);
   let cards = payments.map((el) => {
     const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
     const details = item?.details || {};
@@ -473,36 +495,43 @@ router.get("/info/seller/:sellerId", async (req, res) => {
       where: whereCondition,
     });
 
-    let numberOfCards = payments.map((el) => el?.qty || 0).reduce((a, b) => a + b, 0);
+    let numberOfCards = payments
+      .map((el) => el?.qty || 0)
+      .reduce((a, b) => a + b, 0);
 
     let cards = payments.map((el) => {
       const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
       const details = item?.details || {};
 
       return {
+        id: el?.localCard?.id,
         title: details?.title || "Unknown Title",
         qty: el?.qty || 0,
         sellerPayments: (el?.price || 0) * (el?.qty || 0),
         sellerProfit:
           ((el?.price || 0) - (el?.companyPrice || 0)) * (el?.qty || 0),
+        createtAt: el?.createtAt,
       };
     });
 
     const groupedCards = Object.values(
-      cards.reduce((acc, card) => {
-        if (!acc[card.title]) {
-          acc[card.title] = {
-            title: card.title,
-            qty: 0,
-            sellerPayments: 0,
-            sellerProfit: 0,
-          };
-        }
-        acc[card.title].qty += card.qty;
-        acc[card.title].sellerPayments += card.sellerPayments;
-        acc[card.title].sellerProfit += card.sellerProfit;
-        return acc;
-      }, {})
+      cards
+        .sort((a, b) => b.createtAt - a.createtAt)
+        .reduce((acc, card) => {
+          if (!acc[card.id]) {
+            acc[card.id] = {
+              id: card?.id,
+              title: card.title,
+              qty: 0,
+              sellerPayments: 0,
+              sellerProfit: 0,
+            };
+          }
+          acc[card.id].qty += card.qty;
+          acc[card.id].sellerPayments += card.sellerPayments;
+          acc[card.id].sellerProfit += card.sellerProfit;
+          return acc;
+        }, {})
     );
 
     res.json({ success: true, numberOfCards, cards: groupedCards });
@@ -544,10 +573,9 @@ router.get("/info/provider/:providerId", async (req, res) => {
 
   const groupedPayments = payments.reduce((acc, payment) => {
     const key = payment?.providerCardID;
-    const paymentTitle = Array.isArray(payment?.item) 
-      ? payment?.item[0]?.details?.title 
+    const paymentTitle = Array.isArray(payment?.item)
+      ? payment?.item[0]?.details?.title
       : payment?.item?.details?.title;
-    
 
     if (!acc[key]) acc[key] = [];
     acc[key].push(payment);
@@ -555,13 +583,14 @@ router.get("/info/provider/:providerId", async (req, res) => {
   }, {});
 
   Object.values(groupedPayments).forEach((group) => {
-    const existingTitle = group.find((p) => p?.item?.details?.title)?.item?.details?.title;
+    const existingTitle = group.find((p) => p?.item?.details?.title)?.item
+      ?.details?.title;
 
     group.forEach((payment) => {
       if (!payment?.item?.details?.title) {
         payment.item = payment.item || {};
         payment.item.details = payment.item.details || {};
-        payment.item.details.title = existingTitle || "Unknown Title"; 
+        payment.item.details.title = existingTitle || "Unknown Title";
       }
     });
   });
@@ -569,15 +598,16 @@ router.get("/info/provider/:providerId", async (req, res) => {
   const updatedPayments = Object.values(groupedPayments).flat();
 
   const cards = updatedPayments.map((el) => {
-    const paymentTitle = Array.isArray(el?.item) 
-      ? el?.item[0]?.details?.title 
+    const paymentTitle = Array.isArray(el?.item)
+      ? el?.item[0]?.details?.title
       : el?.item?.details?.title;
-    
+
     return {
       title: paymentTitle || "Unknown Title",
       qty: el?.qty || 0,
       providerPayments: el?.localCard?.price * (el?.qty || 0),
-      providerProfit: (el?.localCard?.price - el?.localCard?.companyPrice) * (el?.qty || 0),
+      providerProfit:
+        (el?.localCard?.price - el?.localCard?.companyPrice) * (el?.qty || 0),
     };
   });
 
