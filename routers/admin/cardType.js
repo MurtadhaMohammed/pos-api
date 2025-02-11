@@ -21,12 +21,12 @@ router.get("/", adminAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
-    const q = req.query.q || ""; 
+    const q = req.query.q || "";
 
     const where = q
       ? {
           name: {
-            contains: q, 
+            contains: q,
             mode: "insensitive",
           },
         }
@@ -39,7 +39,7 @@ router.get("/", adminAuth, async (req, res) => {
       take,
       skip,
       orderBy: {
-        name: "asc", 
+        name: "asc",
       },
     });
 
@@ -70,6 +70,20 @@ router.put("/:id", adminAuth, async (req, res) => {
     const cardType = await prisma.cardType.update({
       where: { id: Number(id) },
       data: { image, name, companyCardID },
+    });
+    res.json(cardType);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/active/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { active } = req.body;
+  try {
+    const cardType = await prisma.cardType.update({
+      where: { id: Number(id) },
+      data: { active },
     });
     res.json(cardType);
   } catch (error) {

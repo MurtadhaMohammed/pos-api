@@ -156,6 +156,7 @@ model AgentCard {
   card         Card     @relation(fields: [cardId], references: [id])
   cardType     CardType @relation(fields: [cardTypeId], references: [id])
   provider     Provider @relation(fields: [providerId], references: [id])
+  active       Boolean  @default(true)
 }
 
 model CardType {
