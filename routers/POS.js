@@ -13,6 +13,43 @@ const dayjs = require("dayjs");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
+// Read all Wallets
+router.get("/wallets", sellerAuth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; // default to page 1
+    const limit = parseInt(req.query.limit) || 10; // default to 10 items per page
+    const skip = (page - 1) * limit;
+
+    const total = await prisma.wallet.count({
+      where: {
+        sellerId: parseInt(req?.user?.id),
+      },
+    });
+    const wallets = await prisma.wallet.findMany({
+      where: {
+        sellerId: parseInt(req?.user?.id),
+      },
+      take: limit,
+      skip,
+      orderBy: {
+        createtAt: "desc",
+      },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      currentPage: page,
+      totalPages: totalPages,
+      totalItems: total,
+      limit: limit,
+      records: wallets,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Login seller
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
