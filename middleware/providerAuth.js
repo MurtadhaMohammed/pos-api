@@ -19,7 +19,9 @@ const providerAuth = async (req, res, next) => {
     try {
       const user = await prisma.admin.findFirst({
         where: { id: decodedUser.id },
-        select: { id: true, type: true },
+        include: {
+          provider: true,
+        },
       });
 
       if (!user) {
@@ -27,12 +29,7 @@ const providerAuth = async (req, res, next) => {
       }
 
       if (user.type === "PROVIDER") {
-        const provider = await prisma.provider.findUnique({
-          where: { userId: user.providerId },
-          select: { id: true, active: true },
-        });
-
-        if (!provider || !provider.active) {
+        if (!user?.provider || !user?.provider.active) {
           return res
             .status(403)
             .json({ error: "Provider account is not active" });
