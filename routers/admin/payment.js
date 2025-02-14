@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const sellerAuth = require("../../middleware/sellerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
+const dayjs = require("dayjs");
 // const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
@@ -468,8 +469,8 @@ router.get("/info/seller/:sellerId", async (req, res) => {
   const { sellerId } = req.params;
   const { startDate, endDate } = req.query;
 
-  const parsedStartDate = startDate ? new Date(startDate) : null;
-  const parsedEndDate = endDate ? new Date(endDate) : null;
+  const parsedStartDate = startDate ? dayjs(startDate).startOf("day") : null;
+  const parsedEndDate = endDate ? dayjs(endDate).endOf("day") : null;
 
   const whereCondition = {
     sellerId: parseInt(sellerId),
@@ -507,6 +508,7 @@ router.get("/info/seller/:sellerId", async (req, res) => {
         id: el?.localCard?.id,
         title: details?.title || "Unknown Title",
         qty: el?.qty || 0,
+        totalDebts: (el?.companyPrice || 0) * (el?.qty || 0),
         sellerPayments: (el?.price || 0) * (el?.qty || 0),
         sellerProfit:
           ((el?.price || 0) - (el?.companyPrice || 0)) * (el?.qty || 0),
@@ -523,11 +525,13 @@ router.get("/info/seller/:sellerId", async (req, res) => {
               id: card?.id,
               title: card.title,
               qty: 0,
+              totalDebts: 0,
               sellerPayments: 0,
               sellerProfit: 0,
             };
           }
           acc[card.id].qty += card.qty;
+          acc[card.id].totalDebts += card.totalDebts;
           acc[card.id].sellerPayments += card.sellerPayments;
           acc[card.id].sellerProfit += card.sellerProfit;
           return acc;
