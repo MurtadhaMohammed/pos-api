@@ -273,6 +273,15 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
           walletAmount: { increment: payment.companyPrice * payment.qty }, // Increment wallet amount
         },
       }),
+
+       prisma.wallet.create({
+        data:{
+          sellerId:payment.seller.id,
+          providerId:payment.seller.providerId,
+          amount: payment.companyPrice * payment.qty,
+          type:"REFUND",
+        }
+      }),
       // Delete payment record
       prisma.payment.delete({
         where: {

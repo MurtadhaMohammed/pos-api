@@ -107,6 +107,7 @@ model Wallet {
   Agent      Agent?     @relation(fields: [agentId], references: [id])
   Provider   Provider?  @relation(fields: [providerId], references: [id])
   seller     Seller     @relation(fields: [sellerId], references: [id])
+  type       PaymentType @default(PAYMENT)
 }
 
 model Payment {
@@ -179,4 +180,9 @@ enum AdminType {
 enum FromWallet {
   PROVIDER
   AGENT
+}
+
+enum PaymentType {
+  PAYMENT
+  REFUND
 }
