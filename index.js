@@ -1,5 +1,8 @@
 const express = require("express");
 var cors = require("cors");
+// const http = require('http');
+// const { Server } = require('socket.io');
+
 const app = express();
 const port = 3000;
 const adminRouter = require("./routers/admin/admin");
@@ -16,9 +19,40 @@ const cardTypeRouter = require("./routers/admin/cardType");
 const POSRouter = require("./routers/POS");
 require("dotenv").config();
 
+// const server = http.createServer(app);
+// const io = new Server(server, {
+//     cors: {
+//         origin: "*",
+//         methods: ["GET", "POST"]
+//     }
+// });
+
+// // Store active user sockets
+// const userSockets = new Map();
+
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// io.on('connection', (socket) => {
+//   console.log('User connected:', socket.id);
+
+//   socket.on('register', (userId) => {
+//       userSockets.set(userId, socket.id);
+//       console.log(`User ${userId} registered with socket ID: ${socket.id}`);
+//   });
+
+//   socket.on('disconnect', () => {
+//       console.log('User disconnected:', socket.id);
+//       for (let [userId, sockId] of userSockets) {
+//           if (sockId === socket.id) {
+//               userSockets.delete(userId);
+//               break;
+//           }
+//       }
+//   });
+// });
 
 app.get("/api", (req, res) => {
   res.json({ msg: "server is live" });
@@ -40,6 +74,21 @@ app.use("/api/admin/seller", sellerRouter);
 
 //POS APIs
 app.use("/api/pos", POSRouter);
+
+// Logout Endpoint
+// app.post('/api/admin/pos-logout', (req, res) => {
+//   const { userId } = req.body;
+//   if (!userId) return res.status(400).json({ message: 'Invalid user ID' });
+
+//   const socketId = userSockets.get(userId);
+//   if (socketId) {
+//       io.to(socketId).emit('forceLogout', { message: 'You have been logged out' });
+//       userSockets.delete(userId);
+//   }
+
+//   res.json({ message: 'User logged out successfully' });
+// });
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
