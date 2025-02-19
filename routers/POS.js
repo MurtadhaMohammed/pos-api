@@ -202,6 +202,12 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
     return res.status(400).json({ message: "companyCardTypeId is required" });
   }
 
+  if (quantity > 1) {
+    return res.status(500).json({
+      error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
+    });
+  }
+
   try {
     const seller = await prisma.seller.findUnique({
       where: {
