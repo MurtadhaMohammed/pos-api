@@ -645,4 +645,110 @@ router.get("/info/provider/:providerId", async (req, res) => {
   res.json({ success: true, numberOfCards, cards: groupedCards });
 });
 
+
+router.get("/intervals", async (req, res) => {
+  try {
+    const { filterType } = req.query;
+
+    // Validate filterType
+    if (!["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+      return res.status(400).json({
+        error: "Invalid filterType. Use day, yesterday, week, month, or year.",
+      });
+    }
+
+    // Calculate start and end dates dynamically
+    const now = dayjs();
+    let start, end;
+
+    switch (filterType) {
+      case "day":
+        start = now.startOf("day").toDate();
+        end = now.endOf("day").toDate();
+        break;
+      case "yesterday":
+        start = now.subtract(1, "day").startOf("day").toDate();
+        end = now.subtract(1, "day").endOf("day").toDate();
+        break;
+      case "week":
+        start = now.startOf("week").toDate();
+        end = now.endOf("week").toDate();
+        break;
+      case "month":
+        start = now.startOf("month").toDate();
+        end = now.endOf("month").toDate();
+        break;
+      case "year":
+        start = now.startOf("year").toDate();
+        end = now.endOf("year").toDate();
+        break;
+    }
+
+    // Fetch payments within the selected date range
+    const payments = await prisma.payment.findMany({
+      where: { createtAt: { gte: start, lte: end } },
+      select: { createtAt: true, price: true, companyPrice: true, qty: true },
+    });
+
+    let intervals = [];
+
+    if (["day", "yesterday"].includes(filterType)) {
+      // Group by hour
+      intervals = Array.from({ length: 24 }, (_, i) => ({
+        interval: `${i}:00`,
+        total: 0,
+      }));
+    } else if (filterType === "week") {
+      // Group by day of the week
+      intervals = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(
+        (day) => ({ interval: day, total: 0 })
+      );
+    } else if (filterType === "month") {
+      // Group by day of the month
+      const daysInMonth = now.daysInMonth();
+      intervals = Array.from({ length: daysInMonth }, (_, i) => ({
+        interval: `${i + 1}`,
+        total: 0,
+      }));
+    } else if (filterType === "year") {
+      // Group by month
+      intervals = Array.from({ length: 12 }, (_, i) => ({
+        interval: dayjs().month(i).format("MMM"),
+        total: 0,
+      }));
+    }
+
+    // Process payments and map them to the correct interval
+    intervals = intervals.map((interval, index) => {
+      let filteredPayments = payments.filter((p) => {
+        const paymentDate = dayjs(p.createtAt);
+        if (["day", "yesterday"].includes(filterType)) {
+          return paymentDate.hour() === index;
+        } else if (filterType === "week") {
+          return paymentDate.format("dddd") === interval.interval;
+        } else if (filterType === "month") {
+          return paymentDate.date() === parseInt(interval.interval, 10);
+        } else if (filterType === "year") {
+          return paymentDate.month() === index;
+        }
+        return false;
+      });
+
+      const total = filteredPayments.reduce(
+        (sum, curr) => sum + ((curr.companyPrice || 0) * (curr.qty || 1)), // ✅ Correct Calculation: price * qty
+        0
+      );
+
+      return { ...interval, total };
+    });
+
+    res.json({
+      paymentsByInterval: intervals,
+    });
+  } catch (error) {
+    console.error("Error fetching payments by interval:", error);
+    res.status(500).json({ error: "An error occurred." });
+  }
+});
+
 module.exports = router;

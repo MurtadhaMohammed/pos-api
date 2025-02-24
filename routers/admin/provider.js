@@ -229,8 +229,6 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
       }
     );
 
-
-
     if (!response.ok) {
       const errorText = await response.text();
       return res
@@ -284,6 +282,120 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
     res.json({ message: "Provider price updated successfully", updatedCard });
   } catch (error) {
     console.error("Error updating provider price:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const dayjs = require("dayjs");
+
+router.get("/info/all", async (req, res) => {
+  const filterType = req.query.filterType;
+  // Validate filterType
+  if (!["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+    return res.status(400).json({
+      error: "Invalid filterType. Use day, yesterday, week, month, or year.",
+    });
+  }
+
+  // Get the correct start date based on filterType
+  let startDate;
+  const today = dayjs().startOf("day"); // Start of today
+
+  switch (filterType) {
+    case "day":
+      startDate = today;
+      break;
+    case "yesterday":
+      startDate = today.subtract(1, "day");
+      break;
+    case "week":
+      startDate = today.startOf("week");
+      break;
+    case "month":
+      startDate = today.startOf("month");
+      break;
+    case "year":
+      startDate = today.startOf("year");
+      break;
+  }
+
+  try {
+    const totalProviders = await prisma.provider.count();
+    const totalSellers = await prisma.seller.count();
+
+    // Fetch providers with sellers and payments count
+    const providers = await prisma.provider.findMany({
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        _count: {
+          select: { sellers: true },
+        },
+      },
+    });
+
+    // Fetch payments within the selected date range and calculate totals manually
+    const payments = await prisma.payment.findMany({
+      where: {
+        createtAt: {
+          gte: startDate.toDate(), // Convert `dayjs` date to JavaScript Date object
+        },
+      },
+      select: {
+        providerId: true,
+        price: true,
+        companyPrice: true,
+        qty: true,
+      },
+    });
+
+    // Convert aggregation results into a map for quick lookup
+    const paymentsMap = payments.reduce((acc, payment) => {
+      const providerId = payment.providerId;
+
+      if (!acc[providerId]) {
+        acc[providerId] = { totalCompanyPrice: 0, totalPrice: 0, totalQty: 0 };
+      }
+
+      acc[providerId].totalCompanyPrice +=
+        (payment.companyPrice || 0) * (payment.qty || 1); // ✅ Sum (companyPrice * qty)
+      acc[providerId].totalPrice += (payment.price || 0) * (payment.qty || 1); // ✅ Sum (price * qty)
+      acc[providerId].totalQty += payment.qty || 0; // ✅ Sum of quantities
+
+      return acc;
+    }, {});
+
+    // Merge provider data with aggregated payment data
+    const formattedProviders = providers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      address: p.address,
+      paymentsCount:
+        payments?.filter((el) => el?.providerId === p?.id)?.length || 0,
+      sellersCount: p._count.sellers,
+      totalCompanyPrice: paymentsMap[p.id]?.totalCompanyPrice || 0,
+      totalPrice: paymentsMap[p.id]?.totalPrice || 0,
+      totalQty: paymentsMap[p.id]?.totalQty || 0,
+    }));
+
+    const sortedList = formattedProviders?.sort(
+      (a, b) => b.totalCompanyPrice - a.totalCompanyPrice
+    );
+
+    const totalPayments = formattedProviders
+      ?.map((el) => el.totalCompanyPrice)
+      .reduce((a, b) => a + b, 0);
+
+
+    res.status(200).json({
+      totalProviders,
+      totalSellers,
+      totalPayments,
+      providers: sortedList,
+    });
+  } catch (error) {
+    console.error("Error fetching providers:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
