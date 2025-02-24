@@ -288,7 +288,7 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
 
 const dayjs = require("dayjs");
 
-router.get("/info/all", async (req, res) => {
+router.get("/info/all", adminAuth, async (req, res) => {
   const filterType = req.query.filterType;
   // Validate filterType
   if (!["day", "week", "month", "year", "yesterday"].includes(filterType)) {
@@ -386,7 +386,6 @@ router.get("/info/all", async (req, res) => {
     const totalPayments = formattedProviders
       ?.map((el) => el.totalCompanyPrice)
       .reduce((a, b) => a + b, 0);
-
 
     res.status(200).json({
       totalProviders,

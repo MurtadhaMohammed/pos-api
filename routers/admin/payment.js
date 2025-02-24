@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const sellerAuth = require("../../middleware/sellerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
 const dayjs = require("dayjs");
+const adminAuth = require("../../middleware/adminAuth");
 // const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
@@ -646,7 +647,7 @@ router.get("/info/provider/:providerId", async (req, res) => {
 });
 
 
-router.get("/intervals", async (req, res) => {
+router.get("/intervals", adminAuth, async (req, res) => {
   try {
     const { filterType } = req.query;
 
