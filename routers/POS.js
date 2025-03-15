@@ -353,104 +353,104 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
   }
 });
 
-router.post("/purchase", sellerAuth, async (req, res) => {
-  const { hold_id, sellerId, providerCardID, providerId } = req.body;
-  if (!hold_id) {
-    return res.status(400).json({ message: "hold_id is required" });
-  }
+// router.post("/purchase", sellerAuth, async (req, res) => {
+//   const { hold_id, sellerId, providerCardID, providerId } = req.body;
+//   if (!hold_id) {
+//     return res.status(400).json({ message: "hold_id is required" });
+//   }
 
-  try {
-    const seller = await prisma.seller.findUnique({
-      where: {
-        id: Number(req?.user?.id),
-      },
-    });
-    const hasAgent = !!seller?.agentId;
-    const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
-      where: {
-        id: Number(providerCardID), // also agent card id if has agent
-      },
-    });
+//   try {
+//     const seller = await prisma.seller.findUnique({
+//       where: {
+//         id: Number(req?.user?.id),
+//       },
+//     });
+//     const hasAgent = !!seller?.agentId;
+//     const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
+//       where: {
+//         id: Number(providerCardID), // also agent card id if has agent
+//       },
+//     });
 
-    const cardPrice = card?.price;
-    const companyPrice = card?.sellerPrice;
+//     const cardPrice = card?.price;
+//     const companyPrice = card?.sellerPrice;
 
-    if (seller?.walletAmount < companyPrice) {
-      res.status(500).json({
-        walletAmount: seller.walletAmount,
-        error: "Your wallet is not enough!",
-      });
-    }
+//     if (seller?.walletAmount < companyPrice) {
+//       res.status(500).json({
+//         walletAmount: seller.walletAmount,
+//         error: "Your wallet is not enough!",
+//       });
+//     }
 
-    // Make a request to the external API
-    const formdata = new FormData();
-    formdata.append("hold_id", hold_id);
+//     // Make a request to the external API
+//     const formdata = new FormData();
+//     formdata.append("hold_id", hold_id);
 
-    const response = await fetch(
-      "https://client.nojoomalrabiaa.com/api/client/purchase",
-      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
-        },
-        body: formdata,
-      }
-    );
+//     const response = await fetch(
+//       "https://client.nojoomalrabiaa.com/api/client/purchase",
+//       // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
+//       {
+//         method: "POST",
+//         headers: {
+//           Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+//         },
+//         body: formdata,
+//       }
+//     );
 
-    let data = await response.json();
-    // if (response.status === 200) {
-    //   data = data[0];
-    // }
+//     let data = await response.json();
+//     // if (response.status === 200) {
+//     //   data = data[0];
+//     // }
 
-    let payment;
-    if (response.status === 200 && !data[0].error) {
-      // const card = await prisma.card.findUnique({
-      //   where: {
-      //     id: parseInt(providerCardID),
-      //   },
-      // });
+//     let payment;
+//     if (response.status === 200 && !data[0].error) {
+//       // const card = await prisma.card.findUnique({
+//       //   where: {
+//       //     id: parseInt(providerCardID),
+//       //   },
+//       // });
 
-      payment = await prisma.payment.create({
-        data: {
-          provider: {
-            connect: { id: parseInt(providerId) },
-          },
-          seller: {
-            connect: { id: parseInt(sellerId) },
-          },
-          companyCardID: data[0]?.id,
-          price: cardPrice,
-          companyPrice,
-          localCard: card,
-          qty: data?.length,
-          providerCardID: parseInt(providerCardID),
-          item: data,
-        },
-      });
+//       payment = await prisma.payment.create({
+//         data: {
+//           provider: {
+//             connect: { id: parseInt(providerId) },
+//           },
+//           seller: {
+//             connect: { id: parseInt(sellerId) },
+//           },
+//           companyCardID: data[0]?.id,
+//           price: cardPrice,
+//           companyPrice,
+//           localCard: card,
+//           qty: data?.length,
+//           providerCardID: parseInt(providerCardID),
+//           item: data,
+//         },
+//       });
 
-      await prisma.seller.update({
-        where: {
-          id: parseInt(sellerId),
-        },
-        data: {
-          walletAmount: seller.walletAmount - companyPrice * data?.length,
-          paymentAmount: seller.paymentAmount + companyPrice * data?.length,
-        },
-      });
-    }
+//       await prisma.seller.update({
+//         where: {
+//           id: parseInt(sellerId),
+//         },
+//         data: {
+//           walletAmount: seller.walletAmount - companyPrice * data?.length,
+//           paymentAmount: seller.paymentAmount + companyPrice * data?.length,
+//         },
+//       });
+//     }
 
-    // Send back the response from the external API
-    res.status(response.status).json({ ...data[0], paymentId: payment?.id });
-  } catch (error) {
-    // Handle errors appropriately
-    console.error("Error making request to external API:", error.message);
-    res.status(500).json({
-      message: "Error making request to external API",
-      error: error.message,
-    });
-  }
-});
+//     // Send back the response from the external API
+//     res.status(response.status).json({ ...data[0], paymentId: payment?.id });
+//   } catch (error) {
+//     // Handle errors appropriately
+//     console.error("Error making request to external API:", error.message);
+//     res.status(500).json({
+//       message: "Error making request to external API",
+//       error: error.message,
+//     });
+//   }
+// });
 
 // router.post("/v2/purchase", sellerAuth, async (req, res) => {
 //   const { hold_id, providerCardID, providerId } = req.body;
