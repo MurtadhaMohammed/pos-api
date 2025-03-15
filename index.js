@@ -1,10 +1,12 @@
 const express = require("express");
 var cors = require("cors");
+var cron = require("node-cron");
 // const http = require('http');
 // const { Server } = require('socket.io');
 
 const app = express();
 const port = 3000;
+const fileUpload = require("express-fileupload");
 const adminRouter = require("./routers/admin/admin");
 const providerRouter = require("./routers/admin/provider");
 const agentRouter = require("./routers/admin/agent");
@@ -16,7 +18,12 @@ const paymentRouter = require("./routers/admin/payment");
 const cardRouter = require("./routers/admin/card");
 const agentCardRouter = require("./routers/admin/agentCard");
 const cardTypeRouter = require("./routers/admin/cardType");
+const archiveRouter = require("./routers/admin/archive");
+const planRouter = require("./routers/admin/plan");
+const stockRouter = require("./routers/admin/stock");
+const providerCardsRouter = require("./routers/admin/providerCards");
 const POSRouter = require("./routers/POS");
+const { resetHoldExpired } = require("./helper/resetHoldExpired");
 require("dotenv").config();
 
 // const server = http.createServer(app);
@@ -30,10 +37,10 @@ require("dotenv").config();
 // // Store active user sockets
 // const userSockets = new Map();
 
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload());
 
 // io.on('connection', (socket) => {
 //   console.log('User connected:', socket.id);
@@ -71,9 +78,17 @@ app.use("/api/admin/cards", cardRouter);
 app.use("/api/admin/agent-card", agentCardRouter);
 app.use("/api/admin/card-types", cardTypeRouter);
 app.use("/api/admin/seller", sellerRouter);
+app.use("/api/admin/archive", archiveRouter);
+app.use("/api/admin/plan", planRouter);
+app.use("/api/admin/stock", stockRouter);
+app.use("/api/admin/provider-cards", providerCardsRouter);
 
 //POS APIs
 app.use("/api/pos", POSRouter);
+
+cron.schedule("*/15 * * * *", async () => {
+  await resetHoldExpired();
+});
 
 // Logout Endpoint
 // app.post('/api/admin/pos-logout', (req, res) => {
@@ -88,7 +103,6 @@ app.use("/api/pos", POSRouter);
 
 //   res.json({ message: 'User logged out successfully' });
 // });
-
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

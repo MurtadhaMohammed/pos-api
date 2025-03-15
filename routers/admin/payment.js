@@ -108,15 +108,10 @@ router.get("/", dashboardAuth, async (req, res) => {
       ? new Date(req.query.startDate)
       : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
-    const { type, providerId, agentId } = req?.user;
+    const { type, providerId } = req?.user;
     const isProvider = type === "PROVIDER";
-    const isAgent = type === "AGENT";
 
-    const where = isProvider
-      ? { providerId: parseInt(providerId) }
-      : isAgent
-      ? { agentId: parseInt(agentId) }
-      : {};
+    const where = isProvider ? { providerId: parseInt(providerId) } : {};
 
     if (startDate && endDate) {
       where.createtAt = {
@@ -168,7 +163,6 @@ router.get("/", dashboardAuth, async (req, res) => {
       include: {
         seller: true,
         provider: true,
-        agent: true,
       },
       skip: skip,
       take: limit,
@@ -275,18 +269,29 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
         },
       }),
 
-       prisma.wallet.create({
-        data:{
-          sellerId:payment.seller.id,
-          providerId:payment.seller.providerId,
+      prisma.wallet.create({
+        data: {
+          sellerId: payment.seller.id,
+          providerId: payment.seller.providerId,
           amount: payment.companyPrice * payment.qty,
-          type:"REFUND",
-        }
+          type: "REFUND",
+        },
       }),
       // Delete payment record
       prisma.payment.delete({
         where: {
           id: Number(paymentId),
+        },
+      }),
+
+      prisma.stock.updateMany({
+        where: {
+          code: {
+            in: payment?.item?.map((p) => p.code),
+          },
+        },
+        data: {
+          status: "Ready",
         },
       }),
     ]);
@@ -646,7 +651,6 @@ router.get("/info/provider/:providerId", async (req, res) => {
   res.json({ success: true, numberOfCards, cards: groupedCards });
 });
 
-
 router.get("/intervals", adminAuth, async (req, res) => {
   try {
     const { filterType } = req.query;
@@ -701,9 +705,15 @@ router.get("/intervals", adminAuth, async (req, res) => {
       }));
     } else if (filterType === "week") {
       // Group by day of the week
-      intervals = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(
-        (day) => ({ interval: day, total: 0 })
-      );
+      intervals = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ].map((day) => ({ interval: day, total: 0 }));
     } else if (filterType === "month") {
       // Group by day of the month
       const daysInMonth = now.daysInMonth();
@@ -736,7 +746,7 @@ router.get("/intervals", adminAuth, async (req, res) => {
       });
 
       const total = filteredPayments.reduce(
-        (sum, curr) => sum + ((curr.companyPrice || 0) * (curr.qty || 1)), // ✅ Correct Calculation: price * qty
+        (sum, curr) => sum + (curr.companyPrice || 0) * (curr.qty || 1), // ✅ Correct Calculation: price * qty
         0
       );
 

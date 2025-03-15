@@ -42,7 +42,7 @@ router.post("/login", async (req, res) => {
   try {
     const admin = await prisma.admin.findUnique({
       where: { username },
-      include: { provider: true, agent: true },
+      include: { provider: true },
     });
 
     if (!admin) {
@@ -64,14 +64,11 @@ router.post("/login", async (req, res) => {
       username: admin.username,
       type: admin.type,
       providerId: admin?.provider?.id,
-      agentId: admin?.agent?.id,
     };
-    
+
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "1h" });
-    
 
     res.json({ message: "Login successful", token });
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

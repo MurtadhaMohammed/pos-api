@@ -14,7 +14,6 @@ router.post("/", dashboardAuth, async (req, res) => {
       },
       include: {
         provider: true,
-        agent: true,
       },
     });
 
@@ -23,7 +22,6 @@ router.post("/", dashboardAuth, async (req, res) => {
     }
 
     const provider = seller.provider;
-    const agent = seller.agent;
 
     if (!provider) {
       return res.status(404).json({ error: "Provider not found" });
@@ -37,23 +35,10 @@ router.post("/", dashboardAuth, async (req, res) => {
       return res.status(400).json({ error: "لاتصير لوتي!." });
     }
 
-    if (
-      req.user?.type !== "ADMIN" &&
-      req.user?.type !== "PROVIDER" &&
-      from === "AGENT" &&
-      parseInt(req.user.agentId) !== seller?.agentId
-    ) {
-      return res.status(400).json({ error: "لاتصير لوتي!." });
-    }
-
     if (from === "PROVIDER" && provider.walletAmount < parseInt(amount)) {
       return res
         .status(400)
         .json({ error: "Provider has insufficient balance" });
-    }
-
-    if (from === "AGENT" && agent.walletAmount < parseInt(amount)) {
-      return res.status(400).json({ error: "Agent has insufficient balance" });
     }
 
     const wallet = await prisma.wallet.create({
@@ -62,8 +47,6 @@ router.post("/", dashboardAuth, async (req, res) => {
         sellerId: parseInt(sellerId),
         date: date || new Date(),
         providerId: provider.id,
-        agentId: agent?.id,
-        from,
       },
     });
 
@@ -75,16 +58,6 @@ router.post("/", dashboardAuth, async (req, res) => {
           },
           data: {
             walletAmount: provider.walletAmount - parseInt(amount),
-          },
-        });
-      }
-      if (from === "AGENT") {
-        await prisma.agent.update({
-          where: {
-            id: agent.id,
-          },
-          data: {
-            walletAmount: agent.walletAmount - parseInt(amount),
           },
         });
       }
@@ -181,7 +154,6 @@ router.delete("/:id", dashboardAuth, async (req, res) => {
       where: { id: Number(id) },
       include: {
         Provider: true,
-        Agent: true,
         seller: true,
       },
     });
@@ -191,7 +163,6 @@ router.delete("/:id", dashboardAuth, async (req, res) => {
     }
 
     const provider = wallet.Provider;
-    const agent = wallet.Agent;
     const from = wallet.from;
     const amount = wallet.amount;
     const sellerId = wallet.sellerId;
@@ -209,46 +180,28 @@ router.delete("/:id", dashboardAuth, async (req, res) => {
       return res.status(400).json({ error: "لاتصير لوتي!." });
     }
 
-    if (
-      req.user?.type !== "ADMIN" &&
-      req.user?.type !== "PROVIDER" &&
-      from === "AGENT" &&
-      parseInt(req.user.agentId) !== seller?.agentId
-    ) {
-      return res.status(400).json({ error: "لاتصير لوتي!." });
-    }
-
     if (seller?.walletAmount < amount) {
       return res
         .status(500)
         .json({ error: "You alresy spent your wallet amount!." });
     }
 
+    if (wallet.type === "REFUND") {
+      return res.status(500).json({ error: "You cont refund this!." });
+    }
+
     await prisma.$transaction(async (prisma) => {
-      if (from === "PROVIDER") {
-        await prisma.provider.update({
-          where: {
-            id: provider.id,
+      await prisma.provider.update({
+        where: {
+          id: provider.id,
+        },
+        data: {
+          walletAmount: {
+            increment: parseInt(amount),
           },
-          data: {
-            walletAmount: {
-              increment: parseInt(amount),
-            },
-          },
-        });
-      }
-      if (from === "AGENT") {
-        await prisma.agent.update({
-          where: {
-            id: agent.id,
-          },
-          data: {
-            walletAmount: {
-              increment: parseInt(amount),
-            },
-          },
-        });
-      }
+        },
+      });
+
       await prisma.seller.update({
         where: {
           id: parseInt(sellerId),

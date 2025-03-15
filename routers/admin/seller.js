@@ -56,17 +56,14 @@ router.post("/", dashboardAuth, async (req, res) => {
 router.get("/", dashboardAuth, async (req, res) => {
   const take = parseInt(req.query.take || 8);
   const skip = parseInt(req.query.skip || 0);
-  const { type, providerId, agentId } = req?.user;
+  const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
-  const isAgent = type === "AGENT";
   const searchQuery = req.query.q || "";
 
   const where = {
     AND: [
       isProvider && !req.query.providerId
         ? { providerId: parseInt(providerId) }
-        : isAgent
-        ? { agentId: parseInt(agentId) }
         : {},
       {
         providerId: parseInt(req?.query?.providerId || 0) || undefined,
@@ -96,7 +93,6 @@ router.get("/", dashboardAuth, async (req, res) => {
     include: {
       provider: true,
       wallet: true,
-      agent: true,
     },
     take,
     skip,

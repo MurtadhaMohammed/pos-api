@@ -10,6 +10,8 @@ const FormData = require("form-data");
 const sharp = require("sharp");
 const fs = require("fs");
 const dayjs = require("dayjs");
+const { holdCard } = require("../helper/holdCard");
+const { purchase } = require("../helper/purchase");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -97,41 +99,41 @@ router.get("/user", sellerAuth, async (req, res) => {
 });
 
 // Read Cards
-router.get("/cards", sellerAuth, async (req, res) => {
-  try {
-    const seller = await prisma.seller.findUnique({
-      where: {
-        id: parseInt(req.user.id),
-      },
-    });
+// router.get("/cards", sellerAuth, async (req, res) => {
+//   try {
+//     const seller = await prisma.seller.findUnique({
+//       where: {
+//         id: parseInt(req.user.id),
+//       },
+//     });
 
-    const hasAgent = !!seller?.agentId;
-    const cards = await prisma[hasAgent ? "agentCard" : "card"].findMany({
-      where: {
-        providerId: Number(req?.user?.providerId),
-        cardType: {
-          active: true,
-        },
-      },
-      include: {
-        cardType: true,
-      },
-    });
+//     const hasAgent = !!seller?.agentId;
+//     const cards = await prisma[hasAgent ? "agentCard" : "card"].findMany({
+//       where: {
+//         providerId: Number(req?.user?.providerId),
+//         cardType: {
+//           active: true,
+//         },
+//       },
+//       include: {
+//         cardType: true,
+//       },
+//     });
 
-    let data = cards?.map((el) => ({
-      id: el?.id,
-      price: el?.price,
-      companyPrice: el?.sellerPrice,
-      image: el?.cardType?.image,
-      name: el?.cardType?.name,
-      companyCardID: el?.cardType?.companyCardID,
-      source: hasAgent ? "Agent" : "Provider",
-    }));
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+//     let data = cards?.map((el) => ({
+//       id: el?.id,
+//       price: el?.price,
+//       companyPrice: el?.sellerPrice,
+//       image: el?.cardType?.image,
+//       name: el?.cardType?.name,
+//       companyCardID: el?.cardType?.companyCardID,
+//       source: hasAgent ? "Agent" : "Provider",
+//     }));
+//     res.json(data);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 router.get("/history", sellerAuth, async (req, res) => {
   try {
@@ -196,94 +198,156 @@ router.get("/history", sellerAuth, async (req, res) => {
   }
 });
 
+// router.post("/cardHolder", sellerAuth, async (req, res) => {
+//   const { companyCardTypeId, quantity = 1 } = req.body;
+//   if (!companyCardTypeId) {
+//     return res.status(400).json({ message: "companyCardTypeId is required" });
+//   }
+
+//   if (quantity > 1) {
+//     return res.status(500).json({
+//       error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
+//     });
+//   }
+
+//   try {
+//     const seller = await prisma.seller.findUnique({
+//       where: {
+//         id: parseInt(req?.user?.id),
+//       },
+//     });
+
+//     if (!seller.active) {
+//       return res.status(500).json({
+//         error: "This account is not active!",
+//       });
+//     }
+
+//     const hasAgent = !!seller?.agentId;
+
+//     const card = await prisma[hasAgent ? "agentCard" : "card"].findFirst({
+//       include: {
+//         cardType: true,
+//       },
+//       where: {
+//         providerId: seller?.providerId,
+//         cardType: {
+//           companyCardID: parseInt(companyCardTypeId),
+//         },
+//         ...(hasAgent ? { agentId: seller?.agentId } : {}),
+//       },
+//     });
+
+//     if (!card) {
+//       return res.status(500).json({
+//         error: "No card found!",
+//       });
+//     }
+
+//     const cardPrice = card?.price;
+//     const companyPrice = card?.sellerPrice;
+
+//     if (seller.walletAmount < (companyPrice * quantity || 1)) {
+//       return res.status(500).json({
+//         walletAmount: seller.walletAmount,
+//         error: "Your wallet is not enough!",
+//       });
+//     }
+
+//     // Make a request to the external API
+//     const formdata = new FormData();
+//     formdata.append("companyCardTypeId", companyCardTypeId);
+//     formdata.append("quantity", quantity);
+
+//     const response = await fetch(
+//       "https://client.nojoomalrabiaa.com/api/client/hold-card",
+//       // "https://api.nojoomalrabiaa.com/v1/companyDashboard/cardHolder",
+//       {
+//         method: "POST",
+//         headers: {
+//           Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+//         },
+//         body: formdata,
+//       }
+//     );
+//     let data = await response.json();
+//     if (response.status === 200) {
+//       data = {
+//         ...data[0],
+//         walletAmount: seller.walletAmount,
+//         price: cardPrice,
+//         companyPrice,
+//       };
+//     }
+//     res.status(response.status).json(data);
+//   } catch (error) {
+//     console.log(error);
+//     console.error("Error making request to external API:", error.message);
+//     res.status(500).json({
+//       message: "Error making request to external API",
+//       walletAmount: 0,
+//       error: error.message,
+//     });
+//   }
+// });
+
+router.get("/cards", sellerAuth, async (req, res) => {
+  try {
+    const cards = await prisma.customPrice.findMany({
+      where: {
+        providerId: Number(req?.user?.providerId),
+        plan: {
+          active: true,
+        },
+      },
+      include: {
+        plan: true,
+      },
+    });
+
+    let data = cards?.map((el) => ({
+      id: el?.id,
+      price: el?.price,
+      companyPrice: el?.sellerPrice,
+      image: el?.plan?.image,
+      name: el?.plan?.title,
+      companyCardID: el?.id,
+    }));
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/cardHolder", sellerAuth, async (req, res) => {
   const { companyCardTypeId, quantity = 1 } = req.body;
-  if (!companyCardTypeId) {
-    return res.status(400).json({ message: "companyCardTypeId is required" });
-  }
-
-  if (quantity > 1) {
-    return res.status(500).json({
-      error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
+  const sellerId = parseInt(req?.user?.id);
+  try {
+    let resp = await holdCard(companyCardTypeId, quantity, sellerId);
+    if (resp.error) {
+      return res.status(500).json(resp);
+    }
+    res.status(200).json(resp);
+  } catch (error) {
+    res.status(500).json({
+      walletAmount: 0,
+      error: error.message,
     });
   }
+});
+
+router.post("/v2/purchase", sellerAuth, async (req, res) => {
+  const { hold_id } = req.body;
+  const sellerId = parseInt(req?.user?.id);
 
   try {
-    const seller = await prisma.seller.findUnique({
-      where: {
-        id: parseInt(req?.user?.id),
-      },
-    });
-
-    if (!seller.active) {
-      return res.status(500).json({
-        error: "This account is not active!",
-      });
+    let resp = await purchase(hold_id, sellerId);
+    if (resp.error) {
+      return res.status(500).json(resp);
     }
-
-    const hasAgent = !!seller?.agentId;
-
-    const card = await prisma[hasAgent ? "agentCard" : "card"].findFirst({
-      include: {
-        cardType: true,
-      },
-      where: {
-        providerId: seller?.providerId,
-        cardType: {
-          companyCardID: parseInt(companyCardTypeId),
-        },
-        ...(hasAgent ? { agentId: seller?.agentId } : {}),
-      },
-    });
-
-    if (!card) {
-      return res.status(500).json({
-        error: "No card found!",
-      });
-    }
-
-    const cardPrice = card?.price;
-    const companyPrice = card?.sellerPrice;
-
-    if (seller.walletAmount < (companyPrice * quantity || 1)) {
-      return res.status(500).json({
-        walletAmount: seller.walletAmount,
-        error: "Your wallet is not enough!",
-      });
-    }
-
-    // Make a request to the external API
-    const formdata = new FormData();
-    formdata.append("companyCardTypeId", companyCardTypeId);
-    formdata.append("quantity", quantity);
-
-    const response = await fetch(
-      "https://client.nojoomalrabiaa.com/api/client/hold-card",
-      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/cardHolder",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
-        },
-        body: formdata,
-      }
-    );
-    let data = await response.json();
-    if (response.status === 200) {
-      data = {
-        ...data[0],
-        walletAmount: seller.walletAmount,
-        price: cardPrice,
-        companyPrice,
-      };
-    }
-    res.status(response.status).json(data);
+    res.status(200).json(resp);
   } catch (error) {
-    console.log(error);
-    console.error("Error making request to external API:", error.message);
     res.status(500).json({
-      message: "Error making request to external API",
-      walletAmount: 0,
       error: error.message,
     });
   }
@@ -388,153 +452,153 @@ router.post("/purchase", sellerAuth, async (req, res) => {
   }
 });
 
-router.post("/v2/purchase", sellerAuth, async (req, res) => {
-  const { hold_id, providerCardID, providerId } = req.body;
+// router.post("/v2/purchase", sellerAuth, async (req, res) => {
+//   const { hold_id, providerCardID, providerId } = req.body;
 
-  const sellerId = req?.user?.id;
+//   const sellerId = req?.user?.id;
 
-  if (!hold_id) {
-    return res.status(400).json({ message: "hold_id is required" });
-  }
+//   if (!hold_id) {
+//     return res.status(400).json({ message: "hold_id is required" });
+//   }
 
-  try {
-    const seller = await prisma.seller.findUnique({
-      where: {
-        id: Number(sellerId),
-      },
-    });
+//   try {
+//     const seller = await prisma.seller.findUnique({
+//       where: {
+//         id: Number(sellerId),
+//       },
+//     });
 
-    const hasAgent = !!seller?.agentId;
-    const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
-      where: {
-        id: Number(providerCardID), // also agent card id if has agent
-        providerId,
-        ...(hasAgent ? { agentId: seller?.agentId } : {}),
-      },
-      ...(hasAgent
-        ? {
-            include: {
-              card: true,
-            },
-          }
-        : {}),
-    });
+//     const hasAgent = !!seller?.agentId;
+//     const card = await prisma[hasAgent ? "agentCard" : "card"].findUnique({
+//       where: {
+//         id: Number(providerCardID), // also agent card id if has agent
+//         providerId,
+//         ...(hasAgent ? { agentId: seller?.agentId } : {}),
+//       },
+//       ...(hasAgent
+//         ? {
+//             include: {
+//               card: true,
+//             },
+//           }
+//         : {}),
+//     });
 
-    if (!card) {
-      return res.status(404).json({ error: "Card Not Found!." });
-    }
+//     if (!card) {
+//       return res.status(404).json({ error: "Card Not Found!." });
+//     }
 
-    const cardPrice = card?.price;
-    const companyPrice = card?.sellerPrice;
+//     const cardPrice = card?.price;
+//     const companyPrice = card?.sellerPrice;
 
-    // if (seller?.walletAmount < (cardPrice * qty)) {
-    //   res.status(500).json({
-    //     walletAmount: seller.walletAmount,
-    //     error: "Your wallet is not enough!",
-    //   });
-    // }
+//     // if (seller?.walletAmount < (cardPrice * qty)) {
+//     //   res.status(500).json({
+//     //     walletAmount: seller.walletAmount,
+//     //     error: "Your wallet is not enough!",
+//     //   });
+//     // }
 
-    // Make a request to the external API
-    const formdata = new FormData();
-    formdata.append("hold_id", hold_id);
+//     // Make a request to the external API
+//     const formdata = new FormData();
+//     formdata.append("hold_id", hold_id);
 
-    const response = await fetch(
-      "https://client.nojoomalrabiaa.com/api/client/purchase",
-      // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
-        },
-        body: formdata,
-      }
-    );
+//     const response = await fetch(
+//       "https://client.nojoomalrabiaa.com/api/client/purchase",
+//       // "https://api.nojoomalrabiaa.com/v1/companyDashboard/purchase",
+//       {
+//         method: "POST",
+//         headers: {
+//           Authorization: `Bearer ${process.env.COMPANY_TOKEN}`,
+//         },
+//         body: formdata,
+//       }
+//     );
 
-    let data = await response.json();
-    // if (response.status === 200) {
-    //   data = data[0];
-    // }
+//     let data = await response.json();
+//     // if (response.status === 200) {
+//     //   data = data[0];
+//     // }
 
-    let payment;
-    if (response.status === 200 && !data[0].error) {
-      payment = await prisma.payment.create({
-        data: {
-          provider: {
-            connect: { id: parseInt(providerId) },
-          },
-          seller: {
-            connect: { id: parseInt(sellerId) },
-          },
-          agent: seller?.agentId
-            ? {
-                connect: { id: seller.agentId }, // Use the relationship here
-              }
-            : undefined, // Leave undefined if no agent
-          companyCardID: data[0]?.id,
-          price: cardPrice,
-          companyPrice,
-          localCard: card,
-          qty: data?.length,
-          providerCardID: parseInt(providerCardID),
-          item: data,
-        },
-      });
+//     let payment;
+//     if (response.status === 200 && !data[0].error) {
+//       payment = await prisma.payment.create({
+//         data: {
+//           provider: {
+//             connect: { id: parseInt(providerId) },
+//           },
+//           seller: {
+//             connect: { id: parseInt(sellerId) },
+//           },
+//           agent: seller?.agentId
+//             ? {
+//                 connect: { id: seller.agentId }, // Use the relationship here
+//               }
+//             : undefined, // Leave undefined if no agent
+//           companyCardID: data[0]?.id,
+//           price: cardPrice,
+//           companyPrice,
+//           localCard: card,
+//           qty: data?.length,
+//           providerCardID: parseInt(providerCardID),
+//           item: data,
+//         },
+//       });
 
-      const updatedSeller = await prisma.seller.update({
-        where: {
-          id: parseInt(sellerId),
-        },
-        data: {
-          walletAmount: {
-            decrement: companyPrice * data?.length,
-          },
-          paymentAmount: {
-            increment: companyPrice * data?.length,
-          },
-        },
-      });
+//       const updatedSeller = await prisma.seller.update({
+//         where: {
+//           id: parseInt(sellerId),
+//         },
+//         data: {
+//           walletAmount: {
+//             decrement: companyPrice * data?.length,
+//           },
+//           paymentAmount: {
+//             increment: companyPrice * data?.length,
+//           },
+//         },
+//       });
 
-      // Map and format the response
+//       // Map and format the response
 
-      // "id": jsonResponse["id"],
-      // "paymentId": jsonResponse["paymentId"],
-      // "code": jsonResponse["code"],
-      // "createdAt": jsonResponse["createdAt"],
+//       // "id": jsonResponse["id"],
+//       // "paymentId": jsonResponse["paymentId"],
+//       // "code": jsonResponse["code"],
+//       // "createdAt": jsonResponse["createdAt"],
 
-      let item = Array.isArray(payment?.item)
-        ? payment?.item[0]
-        : payment?.item;
-      let code = Array.isArray(payment?.item)
-        ? payment?.item.map((d) => d.code).join(" ,")
-        : payment?.item?.code;
+//       let item = Array.isArray(payment?.item)
+//         ? payment?.item[0]
+//         : payment?.item;
+//       let code = Array.isArray(payment?.item)
+//         ? payment?.item.map((d) => d.code).join(" ,")
+//         : payment?.item?.code;
 
-      resp = {
-        id: item?.id,
-        paymentId: payment?.id,
-        price: payment?.price,
-        qty: payment?.qty,
-        createdAt: payment?.createtAt,
-        walletAmount: updatedSeller?.walletAmount,
-        code,
-        name: item?.details?.title,
-        // activeState: payment.activeBy?.sellerId ? "active" : "pending",
-      };
+//       resp = {
+//         id: item?.id,
+//         paymentId: payment?.id,
+//         price: payment?.price,
+//         qty: payment?.qty,
+//         createdAt: payment?.createtAt,
+//         walletAmount: updatedSeller?.walletAmount,
+//         code,
+//         name: item?.details?.title,
+//         // activeState: payment.activeBy?.sellerId ? "active" : "pending",
+//       };
 
-      res.status(200).json(resp);
-    } else {
-      res.status(response.status).json(data[0]);
-    }
+//       res.status(200).json(resp);
+//     } else {
+//       res.status(response.status).json(data[0]);
+//     }
 
-    // Send back the response from the external API
-  } catch (error) {
-    // Handle errors appropriately
-    console.error("Error making request to external API:", error.message);
-    res.status(500).json({
-      message: "Error making request to external API",
-      error: error.message,
-    });
-  }
-});
+//     // Send back the response from the external API
+//   } catch (error) {
+//     // Handle errors appropriately
+//     console.error("Error making request to external API:", error.message);
+//     res.status(500).json({
+//       message: "Error making request to external API",
+//       error: error.message,
+//     });
+//   }
+// });
 
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
