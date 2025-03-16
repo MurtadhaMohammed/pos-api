@@ -59,6 +59,7 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
     where: {
       planId: card.planId,
       active: true,
+      providerId: card.providerId,
       status: "Ready",
     },
     take: quantity,

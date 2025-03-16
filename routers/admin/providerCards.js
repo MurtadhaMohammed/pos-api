@@ -23,9 +23,7 @@ router.get("/:providerId", providerAuth, async (req, res) => {
     }
 
     const provider = await prisma.provider.findUnique({
-      where: {
-        id: providerId,
-      },
+      where: { id: providerId },
     });
 
     const where = { providerId };
@@ -44,26 +42,23 @@ router.get("/:providerId", providerAuth, async (req, res) => {
       return res.json({ data: [], total });
     }
 
-    const stockCounts = await prisma.stock.groupBy({
-      by: ["planId"],
-      where: {
-        planId: { in: customPrice.map((c) => c.planId) },
-        providerId,
-        status: "Ready",
-      },
-      _count: {
-        planId: true,
-      },
-    });
+    // Fetch real-time stock counts dynamically
+    const results = await Promise.all(
+      customPrice.map(async (c) => {
+        const stockCount = await prisma.stock.count({
+          where: {
+            planId: c.planId,
+            providerId,
+            status: "Ready",
+          },
+        });
 
-    const stockMap = Object.fromEntries(
-      stockCounts.map((s) => [s.planId, s._count.planId])
+        return {
+          ...c,
+          count: stockCount,
+        };
+      })
     );
-
-    const results = customPrice.map((c) => ({
-      ...c,
-      count: stockMap[c.planId] || 0,
-    }));
 
     res.json({ data: results, provider, total });
   } catch (error) {
