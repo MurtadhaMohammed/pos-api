@@ -1,11 +1,11 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
-const dashboardAuth = require("../../middleware/dashboardAuth");
+const providerAuth = require("../../middleware/providerAuth");
 const router = express.Router();
 
 // Register
-router.post("/", dashboardAuth, async (req, res) => {
+router.post("/", providerAuth, async (req, res) => {
   const { name, username, password, address, phone, providerId, agentId } =
     req.body;
 
@@ -53,7 +53,7 @@ router.post("/", dashboardAuth, async (req, res) => {
 });
 
 // Get all sellers
-router.get("/", dashboardAuth, async (req, res) => {
+router.get("/", providerAuth, async (req, res) => {
   const take = parseInt(req.query.take || 8);
   const skip = parseInt(req.query.skip || 0);
   const { type, providerId } = req?.user;
@@ -105,7 +105,7 @@ router.get("/", dashboardAuth, async (req, res) => {
 });
 
 // Update seller
-router.put("/:id", dashboardAuth, async (req, res) => {
+router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { name, username, address, phone} = req.body;
 
@@ -118,7 +118,7 @@ router.put("/:id", dashboardAuth, async (req, res) => {
 });
 
 // Update seller cative
-router.put("/active/:id", dashboardAuth, async (req, res) => {
+router.put("/active/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
 
@@ -130,7 +130,7 @@ router.put("/active/:id", dashboardAuth, async (req, res) => {
   res.json(seller);
 });
 
-router.put("/reset-password/:id", dashboardAuth, async (req, res) => {
+router.put("/reset-password/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
 
