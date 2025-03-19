@@ -87,9 +87,21 @@ router.get("/", adminAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
+    const planId = parseInt(req.query.planId) || undefined;
+    const providerId = parseInt(req.query.providerId) || undefined;
 
-    const total = await prisma.archive.count();
+    const where = {
+      AND: [
+        {
+          planId,
+        },
+        { providerId },
+      ],
+    };
+
+    const total = await prisma.archive.count({ where });
     const archives = await prisma.archive.findMany({
+      where,
       include: {
         provider: true,
         plan: true,

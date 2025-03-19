@@ -107,3 +107,9 @@ cron.schedule("*/15 * * * *", async () => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
+// process.on('SIGINT', async () => {
+//   console.log('Shutting down gracefully...');
+//   await prisma.$disconnect();
+//   process.exit(0);
+// });
