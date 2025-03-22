@@ -24,6 +24,7 @@ const stockRouter = require("./routers/admin/stock");
 const providerCardsRouter = require("./routers/admin/providerCards");
 const POSRouter = require("./routers/POS");
 const { resetHoldExpired } = require("./helper/resetHoldExpired");
+const { resetSellerExpiredHolds } = require("./helper/resetSellerHoldExpired")
 require("dotenv").config();
 
 // const server = http.createServer(app);
@@ -88,6 +89,7 @@ app.use("/api/pos", POSRouter);
 
 cron.schedule("*/15 * * * *", async () => {
   await resetHoldExpired();
+  await resetSellerExpiredHolds();
 });
 
 // Logout Endpoint

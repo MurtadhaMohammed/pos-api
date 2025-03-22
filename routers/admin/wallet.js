@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const dashboardAuth = require("../../middleware/dashboardAuth");
+const { generateCustomHoldId } = require('../../helper/generateHoldId');  
 const router = express.Router();
 
 // Create Wallet
@@ -8,9 +9,10 @@ router.post("/", dashboardAuth, async (req, res) => {
   const { amount, sellerId, date, from } = req.body;
   try {
     if (!from) return res.status(400).json({ error: "Data Error!" });
+    const sellerIdInt = parseInt(sellerId);
     const seller = await prisma.seller.findUnique({
       where: {
-        id: parseInt(sellerId),
+        id: sellerIdInt,
       },
       include: {
         provider: true,
@@ -21,10 +23,10 @@ router.post("/", dashboardAuth, async (req, res) => {
       return res.status(404).json({ error: "Seller not found" });
     }
 
-    const provider = seller.provider;
-
-    if (!provider) {
-      return res.status(404).json({ error: "Provider not found" });
+    if (seller.holdId) {
+      return res.status(409).json({
+        error: "Transaction in progress",
+      });
     }
 
     if (
@@ -35,46 +37,72 @@ router.post("/", dashboardAuth, async (req, res) => {
       return res.status(400).json({ error: "لاتصير لوتي!." });
     }
 
-    if (from === "PROVIDER" && provider.walletAmount < parseInt(amount)) {
-      return res
-        .status(400)
-        .json({ error: "Provider has insufficient balance" });
-    }
+    let HoldId = generateCustomHoldId();
 
-    const wallet = await prisma.wallet.create({
-      data: {
-        amount,
-        sellerId: parseInt(sellerId),
-        date: date || new Date(),
-        providerId: provider.id,
-      },
-    });
+    const result = await prisma.$transaction(async (prisma) => {
 
-    await prisma.$transaction(async (prisma) => {
+      /// updateMany here is not for updating multiple sellers ... it's a trick to ensure that the update only happens if holdId is null 
+      const updatedSeller = await prisma.seller.updateMany({
+        where: { id: sellerIdInt, holdId: null },
+        data: { holdId: HoldId, holdAt: new Date() },
+      });
+      
+      // If no rows gets updated it means another transaction already sets the holdId
+      if (updatedSeller.count === 0) {
+        //don't use res.status here cuz it may make an issue in prisma transaction
+        throw new Error("Transaction in progress");
+      }      
+
+      const provider = await prisma.provider.findUnique({
+        where: { id: seller.providerId },
+      });
+
+      if (!provider) {
+        throw new Error("Provider not found");
+      }
+
+      const amountInt = parseInt(amount);
+      if (from === "PROVIDER" && provider.walletAmount < amountInt) {
+        throw new Error("Provider has insufficient balance");
+      }
+
+      const wallet = await prisma.wallet.create({
+        data: {
+          amount: amountInt,
+          sellerId: sellerIdInt,
+          date: date ? new Date(date) : new Date(),
+          providerId: provider.id,
+          holdId: HoldId,
+        },
+      });
+
       if (from === "PROVIDER") {
         await prisma.provider.update({
-          where: {
-            id: provider.id,
-          },
-          data: {
-            walletAmount: provider.walletAmount - parseInt(amount),
-          },
+          where: { id: provider.id },
+          data: { walletAmount: { decrement: amountInt } },
         });
       }
 
       await prisma.seller.update({
-        where: {
-          id: parseInt(sellerId),
-        },
-        data: {
-          walletAmount: seller.walletAmount + parseInt(amount),
-        },
+        where: { id: sellerIdInt },
+        data: { walletAmount: { increment: amountInt } },
       });
+
+      return wallet;
     });
 
-    res.json(wallet);
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    // to handle prisma error message
+    if (error.message && error.message.includes("Transaction already closed")) {
+      return res.status(500).json({
+        error: "Transaction already closed.",
+      });
+    }
+    // to prevent express from sending the many response to the client at once so it can cuz an issue
+    if (!res.headersSent) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 });
 
@@ -130,6 +158,7 @@ router.get("/", dashboardAuth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+  
 });
 
 // Read Wallet by ID

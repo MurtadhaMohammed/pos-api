@@ -55,6 +55,8 @@ model Seller {
   address       String?
   phone         String?
   providerId    Int
+  holdId        String?      @unique
+  holdAt        DateTime?
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
   isHajji       Boolean   @default(false)
@@ -71,6 +73,7 @@ model Wallet {
   amount     Float
   date       DateTime    @default(now())
   createtAt  DateTime    @default(now())
+  holdId     String?     @unique
   sellerId   Int
   providerId Int?
   from       FromWallet  @default(PROVIDER)

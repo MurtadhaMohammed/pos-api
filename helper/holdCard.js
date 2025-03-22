@@ -1,10 +1,5 @@
 const prisma = require("../prismaClient");
-const { v4: uuidv4 } = require("uuid");
-
-function generateCustomHoldId() {
-  const uuid = uuidv4();
-  return `${uuid.slice(0, 8)}-${uuid.slice(9, 13)}${uuid.slice(14, 18)}`;
-}
+const { generateCustomHoldId } = require('../helper/generateHoldId');  
 
 exports.holdCard = async (cardId, quantity = 1, sellerId) => {
   if (!cardId) {
