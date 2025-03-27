@@ -4,6 +4,7 @@ const sellerAuth = require("../../middleware/sellerAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
 const dayjs = require("dayjs");
 const adminAuth = require("../../middleware/adminAuth");
+const providerAuth = require("../../middleware/providerAuth");
 // const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
@@ -651,9 +652,17 @@ router.get("/info/provider/:providerId", async (req, res) => {
   res.json({ success: true, numberOfCards, cards: groupedCards });
 });
 
-router.get("/intervals", adminAuth, async (req, res) => {
+router.get("/intervals", providerAuth, async (req, res) => {
   try {
-    const { filterType } = req.query;
+    const { filterType, providerId } = req.query;
+
+    if (
+      req?.user?.providerId &&
+      providerId &&
+      parseInt(req?.user?.providerId) !== parseInt(providerId)
+    ) {
+      return res.status(401).json({ error: "لا تصير لوتي!." });
+    }
 
     // Validate filterType
     if (!["day", "week", "month", "year", "yesterday"].includes(filterType)) {
@@ -691,7 +700,10 @@ router.get("/intervals", adminAuth, async (req, res) => {
 
     // Fetch payments within the selected date range
     const payments = await prisma.payment.findMany({
-      where: { createtAt: { gte: start, lte: end } },
+      where: {
+        createtAt: { gte: start, lte: end },
+        providerId: parseInt(providerId, 10) || undefined,
+      },
       select: { createtAt: true, price: true, companyPrice: true, qty: true },
     });
 
@@ -756,6 +768,87 @@ router.get("/intervals", adminAuth, async (req, res) => {
     res.json({
       paymentsByInterval: intervals,
     });
+  } catch (error) {
+    console.error("Error fetching payments by interval:", error);
+    res.status(500).json({ error: "An error occurred." });
+  }
+});
+
+router.get("/cards", providerAuth, async (req, res) => {
+  try {
+    const { filterType, providerId } = req.query;
+
+    if (
+      req?.user?.providerId &&
+      providerId &&
+      parseInt(req?.user?.providerId) !== parseInt(providerId)
+    ) {
+      return res.status(401).json({ error: "لا تصير لوتي!." });
+    }
+
+    // Validate filterType
+    if (!["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+      return res.status(400).json({
+        error: "Invalid filterType. Use day, yesterday, week, month, or year.",
+      });
+    }
+
+    const now = dayjs();
+    let start, end;
+
+    switch (filterType) {
+      case "day":
+        start = now.startOf("day").toDate();
+        end = now.endOf("day").toDate();
+        break;
+      case "yesterday":
+        start = now.subtract(1, "day").startOf("day").toDate();
+        end = now.subtract(1, "day").endOf("day").toDate();
+        break;
+      case "week":
+        start = now.startOf("week").toDate();
+        end = now.endOf("week").toDate();
+        break;
+      case "month":
+        start = now.startOf("month").toDate();
+        end = now.endOf("month").toDate();
+        break;
+      case "year":
+        start = now.startOf("year").toDate();
+        end = now.endOf("year").toDate();
+        break;
+    }
+
+    const stockSummary = await prisma.stock.groupBy({
+      by: ["planId"],
+      where: {
+        sold_at: { gte: start, lte: end },
+        status: "Sold",
+        providerId: parseInt(providerId, 10) || undefined,
+      },
+      _count: {
+        id: true,
+      },
+      _min: {
+        planId: true, // Just to include planId in results
+      },
+    });
+
+    // Fetch plan titles separately and map them to the results
+    const planIds = stockSummary.map((item) => item.planId);
+    const plans = await prisma.plan.findMany({
+      where: { id: { in: planIds } },
+      select: { id: true, title: true },
+    });
+
+    // Merge titles with grouped results
+    const result = stockSummary.map((item) => ({
+      planId: item.planId,
+      title: plans.find((plan) => plan.id === item.planId)?.title || "Unknown",
+      count: item._count.id,
+    }));
+
+    res.json(result);
   } catch (error) {
     console.error("Error fetching payments by interval:", error);
     res.status(500).json({ error: "An error occurred." });

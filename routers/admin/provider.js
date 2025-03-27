@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
 const adminAuth = require("../../middleware/adminAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
+const providerAuth = require("../../middleware/providerAuth");
 const router = express.Router();
 const FormData = require("form-data");
 const fetch = (...args) =>
@@ -288,8 +289,18 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
 
 const dayjs = require("dayjs");
 
-router.get("/info/all", adminAuth, async (req, res) => {
+router.get("/info/all", providerAuth, async (req, res) => {
   const filterType = req.query.filterType;
+  const providerId = req.query.providerId;
+
+  if (
+    req?.user?.providerId &&
+    providerId &&
+    parseInt(req?.user?.providerId) !== parseInt(providerId)
+  ) {
+    return res.status(401).json({ error: "لا تصير لوتي!." });
+  }
+
   // Validate filterType
   if (!["day", "week", "month", "year", "yesterday"].includes(filterType)) {
     return res.status(400).json({
@@ -297,34 +308,45 @@ router.get("/info/all", adminAuth, async (req, res) => {
     });
   }
 
-  // Get the correct start date based on filterType
-  let startDate;
-  const today = dayjs().startOf("day"); // Start of today
+  const now = dayjs();
+  let start, end;
 
   switch (filterType) {
     case "day":
-      startDate = today;
+      start = now.startOf("day").toDate();
+      end = now.endOf("day").toDate();
       break;
     case "yesterday":
-      startDate = today.subtract(1, "day");
+      start = now.subtract(1, "day").startOf("day").toDate();
+      end = now.subtract(1, "day").endOf("day").toDate();
       break;
     case "week":
-      startDate = today.startOf("week");
+      start = now.startOf("week").toDate();
+      end = now.endOf("week").toDate();
       break;
     case "month":
-      startDate = today.startOf("month");
+      start = now.startOf("month").toDate();
+      end = now.endOf("month").toDate();
       break;
     case "year":
-      startDate = today.startOf("year");
+      start = now.startOf("year").toDate();
+      end = now.endOf("year").toDate();
       break;
   }
 
   try {
     const totalProviders = await prisma.provider.count();
-    const totalSellers = await prisma.seller.count();
+    const totalSellers = await prisma.seller.count({
+      where: {
+        providerId: parseInt(providerId, 10) || undefined,
+      },
+    });
 
     // Fetch providers with sellers and payments count
     const providers = await prisma.provider.findMany({
+      where: {
+        id: parseInt(providerId, 10) || undefined,
+      },
       select: {
         id: true,
         name: true,
@@ -339,7 +361,8 @@ router.get("/info/all", adminAuth, async (req, res) => {
     const payments = await prisma.payment.findMany({
       where: {
         createtAt: {
-          gte: startDate.toDate(), // Convert `dayjs` date to JavaScript Date object
+          gte: start,
+          lte: end,
         },
       },
       select: {

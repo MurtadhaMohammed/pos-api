@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
 const providerAuth = require("../../middleware/providerAuth");
+const dayjs = require("dayjs");
 const router = express.Router();
 
 // Register
@@ -107,11 +108,11 @@ router.get("/", providerAuth, async (req, res) => {
 // Update seller
 router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, username, address, phone} = req.body;
+  const { name, username, address, phone } = req.body;
 
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
-    data: { name, username, address, phone},
+    data: { name, username, address, phone },
   });
 
   res.json(seller);
@@ -148,6 +149,87 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: "Error updating password" });
+  }
+});
+
+router.get("/info", providerAuth, async (req, res) => {
+  try {
+    const filterType = req?.query?.filterType;
+    const now = dayjs();
+    let start, end;
+
+    switch (filterType) {
+      case "day":
+        start = now.startOf("day").toDate();
+        end = now.endOf("day").toDate();
+        break;
+      case "yesterday":
+        start = now.subtract(1, "day").startOf("day").toDate();
+        end = now.subtract(1, "day").endOf("day").toDate();
+        break;
+      case "week":
+        start = now.startOf("week").toDate();
+        end = now.endOf("week").toDate();
+        break;
+      case "month":
+        start = now.startOf("month").toDate();
+        end = now.endOf("month").toDate();
+        break;
+      case "year":
+        start = now.startOf("year").toDate();
+        end = now.endOf("year").toDate();
+        break;
+    }
+
+    // Get all sellers for the provider
+    const sellers = await prisma.seller.findMany({
+      where: {
+        providerId: req?.user?.providerId,
+      },
+      select: {
+        id: true,
+        name: true, // Assuming sellers have a "name" field
+        address: true,
+      },
+    });
+
+    const sellerIds = sellers.map((el) => el?.id);
+
+    // Get payments grouped by sellerId
+    const payments = await prisma.payment.groupBy({
+      by: ["sellerId"],
+      where: {
+        sellerId: {
+          in: sellerIds,
+        },
+        createtAt: { gte: start, lte: end },
+      },
+      _sum: {
+        companyPrice: true,
+        qty: true,
+      },
+    });
+
+    const result = sellers
+      .map((seller) => {
+        const paymentData = payments.find((p) => p.sellerId === seller.id);
+
+        return {
+          id: seller.id,
+          name: seller.name,
+          address: seller?.address || null, // Ensuring address is included even if null
+          totalPaid:
+            (paymentData?._sum?.companyPrice || 0) *
+            (paymentData?._sum?.qty || 0),
+          count: paymentData?._sum?.qty || 0,
+        };
+      })
+      .filter((seller) => seller.totalPaid > 0);
+
+    res.json(result);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ error: "Error" });
   }
 });
 

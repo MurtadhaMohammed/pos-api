@@ -27,15 +27,15 @@ model Provider {
   active         Boolean          @default(true)
   walletAmount   Float            @default(0)
   roles          Json?
+  archive        Archive[]
   cards          Card[]
+  customPrice    CustomPrice[]
   payments       Payment[]
   admin          Admin?           @relation(fields: [adminId], references: [id])
   providerWallet ProviderWallet[]
   sellers        Seller[]
-  wallets        Wallet[]
-  customPrice    CustomPrice[]
-  archive        Archive[]
   stock          Stock[]
+  wallets        Wallet[]
 }
 
 model ProviderWallet {
@@ -55,17 +55,17 @@ model Seller {
   address       String?
   phone         String?
   providerId    Int
-  holdId        String?      @unique
-  holdAt        DateTime?
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
   isHajji       Boolean   @default(false)
   createtAt     DateTime  @default(now())
   active        Boolean   @default(true)
+  holdAt        DateTime?
+  holdId        String?   @unique
   payments      Payment[]
   provider      Provider  @relation(fields: [providerId], references: [id])
-  wallet        Wallet[]
   stock         Stock[]
+  wallet        Wallet[]
 }
 
 model Wallet {
@@ -73,13 +73,13 @@ model Wallet {
   amount     Float
   date       DateTime    @default(now())
   createtAt  DateTime    @default(now())
-  holdId     String?     @unique
   sellerId   Int
   providerId Int?
   from       FromWallet  @default(PROVIDER)
+  type       PaymentType @default(PAYMENT)
+  holdId     String?     @unique
   Provider   Provider?   @relation(fields: [providerId], references: [id])
   seller     Seller      @relation(fields: [sellerId], references: [id])
-  type       PaymentType @default(PAYMENT)
 }
 
 model Payment {
@@ -91,10 +91,10 @@ model Payment {
   createtAt      DateTime  @default(now())
   sellerId       Int?
   item           Json?
-  localCard      Json?
   providerId     Int?
   activeBy       Json?
   companyPrice   Float?
+  localCard      Json?
   provider       Provider? @relation(fields: [providerId], references: [id])
   seller         Seller?   @relation(fields: [sellerId], references: [id])
 }
@@ -103,11 +103,11 @@ model Card {
   id           Int       @id @default(autoincrement())
   price        Float
   companyPrice Float
-  sellerPrice  Float     @default(0)
   providerId   Int?
   cardTypeId   Int
   createtAt    DateTime  @default(now())
   active       Boolean   @default(true)
+  sellerPrice  Float     @default(0)
   cardType     CardType  @relation(fields: [cardTypeId], references: [id])
   provider     Provider? @relation(fields: [providerId], references: [id])
 }
@@ -119,9 +119,9 @@ model CardType {
   companyCardID Int
   createtAt     DateTime  @default(now())
   active        Boolean   @default(true)
+  categoryId    Int?
   cards         Card[]
   category      Category? @relation(fields: [categoryId], references: [id])
-  categoryId    Int?
 }
 
 model Category {
@@ -140,21 +140,21 @@ model Plan {
   updatedAt   DateTime      @default(now())
   active      Boolean       @default(true)
   hidden      Boolean       @default(false)
-  stock       Stock[]
   archive     Archive[]
   customPrice CustomPrice[]
+  stock       Stock[]
 }
 
 model CustomPrice {
   id           Int       @id @default(autoincrement())
-  plan         Plan?     @relation(fields: [planId], references: [id])
   planId       Int?
-  provider     Provider? @relation(fields: [providerId], references: [id])
   providerId   Int?
   price        Float     @default(0)
   sellerPrice  Float     @default(0)
   companyPrice Float     @default(0)
   active       Boolean   @default(true)
+  plan         Plan?     @relation(fields: [planId], references: [id])
+  provider     Provider? @relation(fields: [providerId], references: [id])
 }
 
 model Stock {
@@ -169,13 +169,13 @@ model Stock {
   archiveId  Int?
   sold_at    DateTime?
   planId     Int?
-  plan       Plan?      @relation(fields: [planId], references: [id])
-  archive    Archive?   @relation(fields: [archiveId], references: [id])
-  provider   Provider?  @relation(fields: [providerId], references: [id])
   providerId Int?
-  seller     Seller?    @relation(fields: [sellerId], references: [id])
   sellerId   Int?
   isOld      Boolean    @default(false)
+  archive    Archive?   @relation(fields: [archiveId], references: [id])
+  plan       Plan?      @relation(fields: [planId], references: [id])
+  provider   Provider?  @relation(fields: [providerId], references: [id])
+  seller     Seller?    @relation(fields: [sellerId], references: [id])
 }
 
 model Archive {
@@ -185,12 +185,12 @@ model Archive {
   reciption_date DateTime?
   note           String?
   active         Boolean   @default(true)
-  stock          Stock[]
-  provider       Provider? @relation(fields: [providerId], references: [id])
   providerId     Int?
   createtAt      DateTime  @default(now())
-  plan           Plan?     @relation(fields: [planId], references: [id])
   planId         Int?
+  plan           Plan?     @relation(fields: [planId], references: [id])
+  provider       Provider? @relation(fields: [providerId], references: [id])
+  stock          Stock[]
 }
 
 enum CodeStatus {
