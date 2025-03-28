@@ -5,9 +5,10 @@ const router = express.Router();
 
 router.get("/", adminAuth, async (req, res) => {
   try {
-    const take = parseInt(req.query.take || 8);
-    const skip = parseInt(req.query.skip || 0);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const q = req.query.q;
+    const skip = (page - 1) * limit;
 
     const where = {
       code: {
@@ -23,8 +24,8 @@ router.get("/", adminAuth, async (req, res) => {
         plan: true,
         archive: true,
       },
-      take,
-      skip,
+      skip: skip,
+      take: limit,
       orderBy: {
         createdAt: "desc",
       },

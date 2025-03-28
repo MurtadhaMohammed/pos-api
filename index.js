@@ -1,8 +1,8 @@
 const express = require("express");
 var cors = require("cors");
 var cron = require("node-cron");
-// const http = require('http');
-// const { Server } = require('socket.io');
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 const port = 3000;
@@ -24,43 +24,17 @@ const stockRouter = require("./routers/admin/stock");
 const providerCardsRouter = require("./routers/admin/providerCards");
 const POSRouter = require("./routers/POS");
 const { resetHoldExpired } = require("./helper/resetHoldExpired");
-const { resetSellerExpiredHolds } = require("./helper/resetSellerHoldExpired")
+const { resetSellerExpiredHolds } = require("./helper/resetSellerHoldExpired");
+const { initializeSocket } = require("./helper/socket");
 require("dotenv").config();
-
-// const server = http.createServer(app);
-// const io = new Server(server, {
-//     cors: {
-//         origin: "*",
-//         methods: ["GET", "POST"]
-//     }
-// });
-
-// // Store active user sockets
-// const userSockets = new Map();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
 
-// io.on('connection', (socket) => {
-//   console.log('User connected:', socket.id);
-
-//   socket.on('register', (userId) => {
-//       userSockets.set(userId, socket.id);
-//       console.log(`User ${userId} registered with socket ID: ${socket.id}`);
-//   });
-
-//   socket.on('disconnect', () => {
-//       console.log('User disconnected:', socket.id);
-//       for (let [userId, sockId] of userSockets) {
-//           if (sockId === socket.id) {
-//               userSockets.delete(userId);
-//               break;
-//           }
-//       }
-//   });
-// });
+const server = http.createServer(app); // Create HTTP server
+initializeSocket(server);
 
 app.get("/api", (req, res) => {
   res.json({ msg: "server is live" });
@@ -92,21 +66,7 @@ cron.schedule("*/15 * * * *", async () => {
   await resetSellerExpiredHolds();
 });
 
-// Logout Endpoint
-// app.post('/api/admin/pos-logout', (req, res) => {
-//   const { userId } = req.body;
-//   if (!userId) return res.status(400).json({ message: 'Invalid user ID' });
-
-//   const socketId = userSockets.get(userId);
-//   if (socketId) {
-//       io.to(socketId).emit('forceLogout', { message: 'You have been logged out' });
-//       userSockets.delete(userId);
-//   }
-
-//   res.json({ message: 'User logged out successfully' });
-// });
-
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
 

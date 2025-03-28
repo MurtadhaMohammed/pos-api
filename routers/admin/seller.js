@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
 const providerAuth = require("../../middleware/providerAuth");
 const dayjs = require("dayjs");
+const { getSocketInstance, connectedUsers } = require("../../helper/socket");
 const router = express.Router();
 
 // Register
@@ -118,6 +119,50 @@ router.put("/:id", providerAuth, async (req, res) => {
   res.json(seller);
 });
 
+// get seller report
+router.patch("/report/:id", providerAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const seller = await prisma.seller.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+  });
+
+  if (
+    seller &&
+    req?.user?.providerId &&
+    parseInt(req?.user?.providerId) !== seller.providerId
+  ) {
+    return res.status(401).json({ error: "لا تصير لوتي!." });
+  }
+
+  const payment = await prisma.payment.findMany({
+    where: { sellerId: parseInt(id) },
+    orderBy:{
+      createtAt: "desc"
+    }
+  });
+
+  const refactorData = payment.map((el) => {
+    let item = Array.isArray(el?.item) ? el?.item[0] : el?.item;
+    let code = Array.isArray(el?.item)
+      ? el?.item.map((d) => d.code).join(" ,")
+      : el?.item?.code;
+
+    return {
+      id: el?.id,
+      code,
+      createdAt: el?.createtAt,
+      plan: item?.details?.title,
+      price: el?.price,
+      cost: el?.companyPrice,
+    };
+  });
+
+  res.json(refactorData);
+});
+
 // Update seller cative
 router.put("/active/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
@@ -127,6 +172,12 @@ router.put("/active/:id", providerAuth, async (req, res) => {
     where: { id: parseInt(id) },
     data: { active },
   });
+
+  const socketId = connectedUsers[seller?.id];
+  if (!seller?.active && socketId) {
+    const io = getSocketInstance();
+    io.to(socketId).emit("logout", "Logout please!..."); // Send notification to all clients
+  }
 
   res.json(seller);
 });
@@ -142,6 +193,12 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
       where: { id: parseInt(id) },
       data: { password: hashedPassword },
     });
+
+    const socketId = connectedUsers[updatedSeller?.id];
+    if (socketId) {
+      const io = getSocketInstance();
+      io.to(socketId).emit("logout", "Logout please!..."); // Send notification to all clients
+    }
 
     res.json({
       message: "Password updated successfully",
