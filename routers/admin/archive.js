@@ -165,4 +165,22 @@ router.delete("/:id", adminAuth, async (req, res) => {
   }
 });
 
+router.put("/active/:id", adminAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { active } = req.body;
+    await prisma.archive.update({
+      where: {
+        id,
+      },
+      data: {
+        active,
+      },
+    });
+    res.json({ message: "تم تعديل الوجبة والمخزون بنجاح!" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

@@ -50,6 +50,9 @@ router.get("/:providerId", providerAuth, async (req, res) => {
             planId: c.planId,
             providerId,
             status: "Ready",
+            archive: {
+              active: true,
+            },
           },
         });
 

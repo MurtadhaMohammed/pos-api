@@ -27,8 +27,19 @@ exports.purchase = async (hold_id, sellerId) => {
       providerId: seller.providerId,
       sellerId: seller.id,
     },
-    include: { plan: true },
+    include: {
+      plan: true,
+      archive: {
+        select: {
+          active: true,
+        },
+      },
+    },
   });
+
+  if (stock?.some((el) => !el?.archive?.active)) {
+    return { error: "this archive not available anymore!" };
+  }
 
   if (!stock.length) {
     return { error: "No stock found for this hold_id!" };

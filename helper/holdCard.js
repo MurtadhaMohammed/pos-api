@@ -1,5 +1,5 @@
 const prisma = require("../prismaClient");
-const { generateCustomHoldId } = require('../helper/generateHoldId');  
+const { generateCustomHoldId } = require("../helper/generateHoldId");
 
 exports.holdCard = async (cardId, quantity = 1, sellerId) => {
   if (!cardId) {
@@ -56,7 +56,11 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
       active: true,
       providerId: card.providerId,
       status: "Ready",
+      archive: {
+        active: true,
+      },
     },
+
     take: quantity,
   });
 
