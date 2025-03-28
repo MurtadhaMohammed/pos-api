@@ -738,7 +738,7 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
             }
     
             .code{
-              font-size: 46px;
+              font-size: ${codes[0].length > 15 ? "42px" : "46px"};
               font-weight: bold;
             }
             .price{
