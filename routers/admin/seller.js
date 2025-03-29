@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const providerAuth = require("../../middleware/providerAuth");
 const dayjs = require("dayjs");
 const { getSocketInstance, connectedUsers } = require("../../helper/socket");
+const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 const router = express.Router();
 
 // Register
@@ -139,9 +140,9 @@ router.patch("/report/:id", providerAuth, async (req, res) => {
 
   const payment = await prisma.payment.findMany({
     where: { sellerId: parseInt(id) },
-    orderBy:{
-      createtAt: "desc"
-    }
+    orderBy: {
+      createtAt: "desc",
+    },
   });
 
   const refactorData = payment.map((el) => {
@@ -211,32 +212,37 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
 
 router.get("/info", providerAuth, async (req, res) => {
   try {
-    const filterType = req?.query?.filterType;
+    let { filterType, startDate, endDate } = req.query;
     const now = dayjs();
     let start, end;
 
-    switch (filterType) {
-      case "day":
-        start = now.startOf("day").toDate();
-        end = now.endOf("day").toDate();
-        break;
-      case "yesterday":
-        start = now.subtract(1, "day").startOf("day").toDate();
-        end = now.subtract(1, "day").endOf("day").toDate();
-        break;
-      case "week":
-        start = now.startOf("week").toDate();
-        end = now.endOf("week").toDate();
-        break;
-      case "month":
-        start = now.startOf("month").toDate();
-        end = now.endOf("month").toDate();
-        break;
-      case "year":
-        start = now.startOf("year").toDate();
-        end = now.endOf("year").toDate();
-        break;
-    }
+    if (startDate && endDate) {
+      start = dayjs(startDate).startOf("day").toDate();
+      end = dayjs(endDate).endOf("day").toDate();
+      filterType = getDateDifferenceType(startDate, endDate);
+    } else
+      switch (filterType) {
+        case "day":
+          start = now.startOf("day").toDate();
+          end = now.endOf("day").toDate();
+          break;
+        case "yesterday":
+          start = now.subtract(1, "day").startOf("day").toDate();
+          end = now.subtract(1, "day").endOf("day").toDate();
+          break;
+        case "week":
+          start = now.startOf("week").toDate();
+          end = now.endOf("week").toDate();
+          break;
+        case "month":
+          start = now.startOf("month").toDate();
+          end = now.endOf("month").toDate();
+          break;
+        case "year":
+          start = now.startOf("year").toDate();
+          end = now.endOf("year").toDate();
+          break;
+      }
 
     // Get all sellers for the provider
     const sellers = await prisma.seller.findMany({
@@ -252,35 +258,37 @@ router.get("/info", providerAuth, async (req, res) => {
 
     const sellerIds = sellers.map((el) => el?.id);
 
-    // Get payments grouped by sellerId
-    const payments = await prisma.payment.groupBy({
-      by: ["sellerId"],
+    // Get all payments for the given sellers within the date range
+    const payments = await prisma.payment.findMany({
       where: {
-        sellerId: {
-          in: sellerIds,
-        },
+        sellerId: { in: sellerIds },
         createtAt: { gte: start, lte: end },
       },
-      _sum: {
+      select: {
+        sellerId: true,
         companyPrice: true,
         qty: true,
       },
     });
 
-    const result = sellers
-      .map((seller) => {
-        const paymentData = payments.find((p) => p.sellerId === seller.id);
+    // Group payments by sellerId
+    const paymentMap = payments.reduce((acc, payment) => {
+      if (!acc[payment.sellerId]) {
+        acc[payment.sellerId] = { totalPaid: 0, count: 0 };
+      }
+      acc[payment.sellerId].totalPaid += payment.companyPrice * payment.qty;
+      acc[payment.sellerId].count += payment.qty;
+      return acc;
+    }, {});
 
-        return {
-          id: seller.id,
-          name: seller.name,
-          address: seller?.address || null, // Ensuring address is included even if null
-          totalPaid:
-            (paymentData?._sum?.companyPrice || 0) *
-            (paymentData?._sum?.qty || 0),
-          count: paymentData?._sum?.qty || 0,
-        };
-      })
+    const result = sellers
+      .map((seller) => ({
+        id: seller.id,
+        name: seller.name,
+        address: seller?.address || null,
+        totalPaid: paymentMap[seller.id]?.totalPaid || 0,
+        count: paymentMap[seller.id]?.count || 0,
+      }))
       .filter((seller) => seller.totalPaid > 0);
 
     res.json(result);

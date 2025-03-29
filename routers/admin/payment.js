@@ -5,6 +5,7 @@ const dashboardAuth = require("../../middleware/dashboardAuth");
 const dayjs = require("dayjs");
 const adminAuth = require("../../middleware/adminAuth");
 const providerAuth = require("../../middleware/providerAuth");
+const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 // const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
 
@@ -654,7 +655,7 @@ router.get("/info/provider/:providerId", async (req, res) => {
 
 router.get("/intervals", providerAuth, async (req, res) => {
   try {
-    const { filterType, providerId } = req.query;
+    let { filterType, providerId, startDate, endDate } = req.query;
 
     if (
       req?.user?.providerId &&
@@ -675,28 +676,33 @@ router.get("/intervals", providerAuth, async (req, res) => {
     const now = dayjs();
     let start, end;
 
-    switch (filterType) {
-      case "day":
-        start = now.startOf("day").toDate();
-        end = now.endOf("day").toDate();
-        break;
-      case "yesterday":
-        start = now.subtract(1, "day").startOf("day").toDate();
-        end = now.subtract(1, "day").endOf("day").toDate();
-        break;
-      case "week":
-        start = now.startOf("week").toDate();
-        end = now.endOf("week").toDate();
-        break;
-      case "month":
-        start = now.startOf("month").toDate();
-        end = now.endOf("month").toDate();
-        break;
-      case "year":
-        start = now.startOf("year").toDate();
-        end = now.endOf("year").toDate();
-        break;
-    }
+    if (startDate && endDate) {
+      start = dayjs(startDate).startOf("day").toDate();
+      end = dayjs(endDate).endOf("day").toDate();
+      filterType = getDateDifferenceType(startDate, endDate);
+    } else
+      switch (filterType) {
+        case "day":
+          start = now.startOf("day").toDate();
+          end = now.endOf("day").toDate();
+          break;
+        case "yesterday":
+          start = now.subtract(1, "day").startOf("day").toDate();
+          end = now.subtract(1, "day").endOf("day").toDate();
+          break;
+        case "week":
+          start = now.startOf("week").toDate();
+          end = now.endOf("week").toDate();
+          break;
+        case "month":
+          start = now.startOf("month").toDate();
+          end = now.endOf("month").toDate();
+          break;
+        case "year":
+          start = now.startOf("year").toDate();
+          end = now.endOf("year").toDate();
+          break;
+      }
 
     // Fetch payments within the selected date range
     const payments = await prisma.payment.findMany({
@@ -776,7 +782,7 @@ router.get("/intervals", providerAuth, async (req, res) => {
 
 router.get("/cards", providerAuth, async (req, res) => {
   try {
-    const { filterType, providerId } = req.query;
+    let { filterType, providerId, startDate, endDate } = req.query;
 
     if (
       req?.user?.providerId &&
@@ -796,28 +802,33 @@ router.get("/cards", providerAuth, async (req, res) => {
     const now = dayjs();
     let start, end;
 
-    switch (filterType) {
-      case "day":
-        start = now.startOf("day").toDate();
-        end = now.endOf("day").toDate();
-        break;
-      case "yesterday":
-        start = now.subtract(1, "day").startOf("day").toDate();
-        end = now.subtract(1, "day").endOf("day").toDate();
-        break;
-      case "week":
-        start = now.startOf("week").toDate();
-        end = now.endOf("week").toDate();
-        break;
-      case "month":
-        start = now.startOf("month").toDate();
-        end = now.endOf("month").toDate();
-        break;
-      case "year":
-        start = now.startOf("year").toDate();
-        end = now.endOf("year").toDate();
-        break;
-    }
+    if (startDate && endDate) {
+      start = dayjs(startDate).startOf("day").toDate();
+      end = dayjs(endDate).endOf("day").toDate();
+      filterType = getDateDifferenceType(startDate, endDate);
+    } else
+      switch (filterType) {
+        case "day":
+          start = now.startOf("day").toDate();
+          end = now.endOf("day").toDate();
+          break;
+        case "yesterday":
+          start = now.subtract(1, "day").startOf("day").toDate();
+          end = now.subtract(1, "day").endOf("day").toDate();
+          break;
+        case "week":
+          start = now.startOf("week").toDate();
+          end = now.endOf("week").toDate();
+          break;
+        case "month":
+          start = now.startOf("month").toDate();
+          end = now.endOf("month").toDate();
+          break;
+        case "year":
+          start = now.startOf("year").toDate();
+          end = now.endOf("year").toDate();
+          break;
+      }
 
     const stockSummary = await prisma.stock.groupBy({
       by: ["planId"],

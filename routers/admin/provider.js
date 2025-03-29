@@ -288,10 +288,10 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
 });
 
 const dayjs = require("dayjs");
+const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 
 router.get("/info/all", providerAuth, async (req, res) => {
-  const filterType = req.query.filterType;
-  const providerId = req.query.providerId;
+  let { filterType, providerId, startDate, endDate } = req.query;
 
   if (
     req?.user?.providerId &&
@@ -311,28 +311,33 @@ router.get("/info/all", providerAuth, async (req, res) => {
   const now = dayjs();
   let start, end;
 
-  switch (filterType) {
-    case "day":
-      start = now.startOf("day").toDate();
-      end = now.endOf("day").toDate();
-      break;
-    case "yesterday":
-      start = now.subtract(1, "day").startOf("day").toDate();
-      end = now.subtract(1, "day").endOf("day").toDate();
-      break;
-    case "week":
-      start = now.startOf("week").toDate();
-      end = now.endOf("week").toDate();
-      break;
-    case "month":
-      start = now.startOf("month").toDate();
-      end = now.endOf("month").toDate();
-      break;
-    case "year":
-      start = now.startOf("year").toDate();
-      end = now.endOf("year").toDate();
-      break;
-  }
+  if (startDate && endDate) {
+    start = dayjs(startDate).startOf("day").toDate();
+    end = dayjs(endDate).endOf("day").toDate();
+    filterType = getDateDifferenceType(startDate, endDate);
+  } else
+    switch (filterType) {
+      case "day":
+        start = now.startOf("day").toDate();
+        end = now.endOf("day").toDate();
+        break;
+      case "yesterday":
+        start = now.subtract(1, "day").startOf("day").toDate();
+        end = now.subtract(1, "day").endOf("day").toDate();
+        break;
+      case "week":
+        start = now.startOf("week").toDate();
+        end = now.endOf("week").toDate();
+        break;
+      case "month":
+        start = now.startOf("month").toDate();
+        end = now.endOf("month").toDate();
+        break;
+      case "year":
+        start = now.startOf("year").toDate();
+        end = now.endOf("year").toDate();
+        break;
+    }
 
   try {
     const totalProviders = await prisma.provider.count();
