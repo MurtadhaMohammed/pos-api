@@ -106,6 +106,58 @@ router.post("/", dashboardAuth, async (req, res) => {
   }
 });
 
+router.post("/resetHold", dashboardAuth, async (req, res) => {
+  const { sellerId } = req.body;
+
+  if (!sellerId) {
+    return res.status(400).json({ message: "No seller id provided!" });
+  }
+
+  const seller = await prisma.seller.findUnique({
+    where: {
+      id: parseInt(sellerId),
+    },
+    include: {
+      provider: true,
+    },
+  });
+
+  if (!seller) {
+    return res.status(404).json({ message: "Seller not found!" });
+  }
+
+  try {
+    if (
+      req.user?.type !== "ADMIN" &&
+      req.user.providerId !== String(seller?.providerId)
+    ) {
+      return res.status(403).json({ error: "لاتصير لوتي!." });
+    }
+
+    // to handle error if no - hold id - properly instead of crashing
+    const updatedSeller = await prisma.seller.updateMany({
+      where: {
+        id: parseInt(sellerId),
+        holdId: { not: null }, 
+      },
+      data: {
+        holdId: null,
+        holdAt: null,
+      },
+    });
+
+    if (updatedSeller.count === 0) {
+      return res.status(409).json({ message: "No active hold to reset." });
+    }
+
+    res.json({ message: "Hold successfully reset." });
+  } catch (error) {
+    console.error("Error resetting hold:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+
 // Read all Wallets
 router.get("/", dashboardAuth, async (req, res) => {
   try {
