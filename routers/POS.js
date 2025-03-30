@@ -676,7 +676,6 @@ router.post("/refresh", sellerAuth, async (req, res) => {
     );
 
     let data = await response.json();
-
     // Send back the response from the external API
     res.status(response.status).json(data);
   } catch (error) {
