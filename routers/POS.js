@@ -319,6 +319,37 @@ router.get("/cards", sellerAuth, async (req, res) => {
   }
 });
 
+router.get("/cards/:categoryId", sellerAuth, async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.categoryId, 10) || undefined;
+
+    const cards = await prisma.customPrice.findMany({
+      where: {
+        providerId: Number(req?.user?.providerId),
+        plan: {
+          categoryId,
+          active: true,
+        },
+      },
+      include: {
+        plan: true,
+      },
+    });
+
+    let data = cards?.map((el) => ({
+      id: el?.id,
+      price: el?.price,
+      companyPrice: el?.sellerPrice,
+      image: el?.plan?.image,
+      name: el?.plan?.title,
+      companyCardID: el?.id,
+    }));
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/cardHolder", sellerAuth, async (req, res) => {
   const { companyCardTypeId, quantity = 1 } = req.body;
   const sellerId = parseInt(req?.user?.id);
@@ -843,6 +874,53 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
     res.status(500).json({ message: error?.message || "Error" });
   }
 });
+
+// Read all category
+router.get("/categories", sellerAuth, async (req, res) => {
+  try {
+    const take = parseInt(req.query.take || 20);
+    const skip = parseInt(req.query.skip || 0);
+
+    const cards = await prisma.customPrice.findMany({
+      where: {
+        providerId: Number(req?.user?.providerId),
+        plan: {
+          active: true,
+        },
+      },
+      include: {
+        plan: {
+          select: {
+            categoryId: true,
+          },
+        },
+      },
+    });
+
+    const categoryIds = [...new Set(cards.map((card) => card.plan.categoryId))];
+
+    const where = {
+      active: true,
+      id: {
+        in: categoryIds,
+      },
+    };
+
+    const categories = await prisma.category.findMany({
+      where,
+      take,
+      skip,
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // .toFile("invoice.png", (err, info) => {
 //   if (err) {
 //     console.error(err);

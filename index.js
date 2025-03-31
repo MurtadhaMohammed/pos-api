@@ -20,6 +20,7 @@ const agentCardRouter = require("./routers/admin/agentCard");
 const cardTypeRouter = require("./routers/admin/cardType");
 const archiveRouter = require("./routers/admin/archive");
 const planRouter = require("./routers/admin/plan");
+const categoryRouter = require("./routers/admin/categories");
 const stockRouter = require("./routers/admin/stock");
 const providerCardsRouter = require("./routers/admin/providerCards");
 const POSRouter = require("./routers/POS");
@@ -55,6 +56,7 @@ app.use("/api/admin/card-types", cardTypeRouter);
 app.use("/api/admin/seller", sellerRouter);
 app.use("/api/admin/archive", archiveRouter);
 app.use("/api/admin/plan", planRouter);
+app.use("/api/admin/category", categoryRouter);
 app.use("/api/admin/stock", stockRouter);
 app.use("/api/admin/provider-cards", providerCardsRouter);
 

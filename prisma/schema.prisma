@@ -130,6 +130,8 @@ model Category {
   title     String
   active    Boolean    @default(true)
   cardTypes CardType[]
+  plans     Plan[]
+  createdAt DateTime   @default(now())
 }
 
 model Plan {
@@ -143,6 +145,8 @@ model Plan {
   archive     Archive[]
   customPrice CustomPrice[]
   stock       Stock[]
+  category    Category?     @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
 }
 
 model CustomPrice {

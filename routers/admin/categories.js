@@ -6,19 +6,19 @@ const router = express.Router();
 
 // Create Plan
 router.post("/", adminAuth, async (req, res) => {
-  const { image, title, categoryId } = req.body;
+  const { image, title } = req.body;
   try {
-    const plan = await prisma.plan.create({
-      data: { image, title, categoryId },
+    const category = await prisma.category.create({
+      data: { image, title },
     });
-    res.json(plan);
+    res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Read all plans
-router.get("/", providerAuth, async (req, res) => {
+// Read all category
+router.get("/", adminAuth, async (req, res) => {
   try {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
@@ -33,36 +33,40 @@ router.get("/", providerAuth, async (req, res) => {
         }
       : {};
 
-    const total = await prisma.plan.count({ where });
+    const total = await prisma.category.count({ where });
 
-    const plans = await prisma.plan.findMany({
+    const categories = await prisma.category.findMany({
       where,
       take,
       skip,
       include: {
-        category: true,
+        _count: {
+          select: {
+            plans: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    res.json({ data: plans, total });
+    res.json({ data: categories, total });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Update Plan by ID
+// Update category by ID
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { image, title, categoryId } = req.body;
+  const { image, title } = req.body;
   try {
-    const plan = await prisma.plan.update({
+    const category = await prisma.category.update({
       where: { id: Number(id) },
-      data: { image, title, categoryId },
+      data: { image, title },
     });
-    res.json(plan);
+    res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -72,11 +76,11 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
   try {
-    const plans = await prisma.plan.update({
+    const category = await prisma.category.update({
       where: { id: Number(id) },
       data: { active },
     });
-    res.json(plans);
+    res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -86,11 +90,20 @@ router.put("/active/:id", adminAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    const plan = await prisma.plan.update({
-      where: { id: Number(id) },
-      data: { hidden: true },
+    const category = await prisma.category.findUnique({
+      include: {
+        plans: true,
+      },
     });
-    res.json(plan);
+
+    if (category?.plans?.length > 0) {
+      return res.status(500).json({ error: "You Cant Delete This Group.!" });
+    }
+
+    await prisma.category.delete({
+      where: { id: Number(id) },
+    });
+    res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
