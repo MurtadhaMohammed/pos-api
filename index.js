@@ -34,7 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
 
-const server = http.createServer(app); // Create HTTP server
+const server = http.createServer(app);
 initializeSocket(server);
 
 app.get("/api", (req, res) => {
