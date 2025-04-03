@@ -1,7 +1,8 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const dashboardAuth = require("../../middleware/dashboardAuth");
-const { generateCustomHoldId } = require('../../helper/generateHoldId');  
+const { generateCustomHoldId } = require("../../helper/generateHoldId");
+const providerAuth = require("../../middleware/providerAuth");
 const router = express.Router();
 
 // Create Wallet
@@ -40,18 +41,17 @@ router.post("/", dashboardAuth, async (req, res) => {
     let HoldId = generateCustomHoldId();
 
     const result = await prisma.$transaction(async (prisma) => {
-
-      /// updateMany here is not for updating multiple sellers ... it's a trick to ensure that the update only happens if holdId is null 
+      /// updateMany here is not for updating multiple sellers ... it's a trick to ensure that the update only happens if holdId is null
       const updatedSeller = await prisma.seller.updateMany({
         where: { id: sellerIdInt, holdId: null },
         data: { holdId: HoldId, holdAt: new Date() },
       });
-      
+
       // If no rows gets updated it means another transaction already sets the holdId
       if (updatedSeller.count === 0) {
         //don't use res.status here cuz it may make an issue in prisma transaction
         throw new Error("Transaction in progress");
-      }      
+      }
 
       const provider = await prisma.provider.findUnique({
         where: { id: seller.providerId },
@@ -106,7 +106,7 @@ router.post("/", dashboardAuth, async (req, res) => {
   }
 });
 
-router.post("/resetHold", dashboardAuth, async (req, res) => {
+router.post("/resetHold", providerAuth, async (req, res) => {
   const { sellerId } = req.body;
 
   if (!sellerId) {
@@ -129,7 +129,7 @@ router.post("/resetHold", dashboardAuth, async (req, res) => {
   try {
     if (
       req.user?.type !== "ADMIN" &&
-      req.user.providerId !== String(seller?.providerId)
+      req.user.providerId !== seller?.providerId
     ) {
       return res.status(403).json({ error: "لاتصير لوتي!." });
     }
@@ -138,7 +138,7 @@ router.post("/resetHold", dashboardAuth, async (req, res) => {
     const updatedSeller = await prisma.seller.updateMany({
       where: {
         id: parseInt(sellerId),
-        holdId: { not: null }, 
+        holdId: { not: null },
       },
       data: {
         holdId: null,
@@ -156,7 +156,6 @@ router.post("/resetHold", dashboardAuth, async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
-
 
 // Read all Wallets
 router.get("/", dashboardAuth, async (req, res) => {
@@ -210,7 +209,6 @@ router.get("/", dashboardAuth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-  
 });
 
 // Read Wallet by ID
