@@ -897,7 +897,10 @@ router.get("/categories", sellerAuth, async (req, res) => {
       },
     });
 
-    const categoryIds = [...new Set(cards.map((card) => card.plan.categoryId))];
+    // const categoryIds = [...new Set(cards.map((card) => card.plan.categoryId))];
+    const categoryIds = [
+      ...new Set(cards.map((card) => card.plan?.categoryId).filter(Boolean)),
+    ];
 
     const where = {
       active: true,
