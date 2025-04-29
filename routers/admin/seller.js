@@ -85,6 +85,12 @@ router.get("/", providerAuth, async (req, res) => {
               mode: "insensitive",
             },
           },
+          {
+            username: {
+              contains: searchQuery,
+              mode: "insensitive",
+            },
+          },
         ],
       },
     ],
