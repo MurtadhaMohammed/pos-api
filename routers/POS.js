@@ -368,11 +368,11 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
 });
 
 router.post("/v2/purchase", sellerAuth, async (req, res) => {
-  const { hold_id } = req.body;
+  const { hold_id, note } = req.body;
   const sellerId = parseInt(req?.user?.id);
 
   try {
-    let resp = await purchase(hold_id, sellerId);
+    let resp = await purchase(hold_id, sellerId, note);
     if (resp.error) {
       return res.status(500).json(resp);
     }

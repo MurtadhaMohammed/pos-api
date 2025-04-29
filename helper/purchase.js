@@ -1,6 +1,6 @@
 const prisma = require("../prismaClient");
 
-exports.purchase = async (hold_id, sellerId) => {
+exports.purchase = async (hold_id, sellerId, note = "") => {
   if (!hold_id) {
     return { error: "hold_id is required" };
   }
@@ -126,6 +126,7 @@ exports.purchase = async (hold_id, sellerId) => {
           },
           qty: stock.length,
           providerCardID: customPrice.id,
+          note,
           item: stock.map((s) => ({
             id: customPrice.id,
             code: s.code,

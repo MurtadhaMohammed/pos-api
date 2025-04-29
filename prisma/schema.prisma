@@ -62,6 +62,7 @@ model Seller {
   active        Boolean   @default(true)
   holdAt        DateTime?
   holdId        String?   @unique
+  note          String?
   payments      Payment[]
   provider      Provider  @relation(fields: [providerId], references: [id])
   stock         Stock[]
@@ -94,6 +95,7 @@ model Payment {
   providerId     Int?
   activeBy       Json?
   companyPrice   Float?
+  note           String?
   localCard      Json?
   provider       Provider? @relation(fields: [providerId], references: [id])
   seller         Seller?   @relation(fields: [sellerId], references: [id])
