@@ -76,6 +76,7 @@ model Wallet {
   createtAt  DateTime    @default(now())
   sellerId   Int
   providerId Int?
+  note       String?
   from       FromWallet  @default(PROVIDER)
   type       PaymentType @default(PAYMENT)
   holdId     String?     @unique
@@ -97,6 +98,7 @@ model Payment {
   companyPrice   Float?
   note           String?
   localCard      Json?
+  holdId         String?   @unique
   provider       Provider? @relation(fields: [providerId], references: [id])
   seller         Seller?   @relation(fields: [sellerId], references: [id])
 }

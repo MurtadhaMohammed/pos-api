@@ -127,6 +127,7 @@ exports.purchase = async (hold_id, sellerId, note = "") => {
           qty: stock.length,
           providerCardID: customPrice.id,
           note,
+          holdId: hold_id,
           item: stock.map((s) => ({
             id: customPrice.id,
             code: s.code,

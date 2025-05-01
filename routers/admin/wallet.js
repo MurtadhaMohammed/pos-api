@@ -7,9 +7,8 @@ const router = express.Router();
 
 // Create Wallet
 router.post("/", dashboardAuth, async (req, res) => {
-  const { amount, sellerId, date, from } = req.body;
+  const { amount, sellerId, date, note } = req.body;
   try {
-    if (!from) return res.status(400).json({ error: "Data Error!" });
     const sellerIdInt = parseInt(sellerId);
     const seller = await prisma.seller.findUnique({
       where: {
@@ -32,7 +31,6 @@ router.post("/", dashboardAuth, async (req, res) => {
 
     if (
       req.user?.type !== "ADMIN" &&
-      from === "PROVIDER" &&
       parseInt(req.user.providerId) !== seller?.providerId
     ) {
       return res.status(400).json({ error: "لاتصير لوتي!." });
@@ -62,7 +60,7 @@ router.post("/", dashboardAuth, async (req, res) => {
       }
 
       const amountInt = parseInt(amount);
-      if (from === "PROVIDER" && provider.walletAmount < amountInt) {
+      if (provider.walletAmount < amountInt) {
         throw new Error("Provider has insufficient balance");
       }
 
@@ -73,15 +71,14 @@ router.post("/", dashboardAuth, async (req, res) => {
           date: date ? new Date(date) : new Date(),
           providerId: provider.id,
           holdId: HoldId,
+          note,
         },
       });
 
-      if (from === "PROVIDER") {
-        await prisma.provider.update({
-          where: { id: provider.id },
-          data: { walletAmount: { decrement: amountInt } },
-        });
-      }
+      await prisma.provider.update({
+        where: { id: provider.id },
+        data: { walletAmount: { decrement: amountInt } },
+      });
 
       await prisma.seller.update({
         where: { id: sellerIdInt },
