@@ -171,6 +171,7 @@ router.get("/history", sellerAuth, async (req, res) => {
         companyCardID: el?.companyCardID,
         createdAt: el?.createtAt,
         code,
+        note: el?.note,
         name: item?.details?.title,
         activeState: el.activeBy?.sellerId ? "active" : "pending",
       };
