@@ -402,6 +402,7 @@ router.get("/info/all", providerAuth, async (req, res) => {
       paymentsCount:
         payments?.filter((el) => el?.providerId === p?.id)?.length || 0,
       sellersCount: p._count.sellers,
+      stockCount: p._count.sellers,
       totalCompanyPrice: paymentsMap[p.id]?.totalCompanyPrice || 0,
       totalPrice: paymentsMap[p.id]?.totalPrice || 0,
       totalQty: paymentsMap[p.id]?.totalQty || 0,
