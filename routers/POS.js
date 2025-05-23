@@ -896,6 +896,9 @@ router.get("/categories", sellerAuth, async (req, res) => {
           },
         },
       },
+      orderBy: {
+        priority: "asc",
+      },
     });
 
     // const categoryIds = [...new Set(cards.map((card) => card.plan.categoryId))];

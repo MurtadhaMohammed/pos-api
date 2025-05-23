@@ -76,10 +76,10 @@ model Wallet {
   createtAt  DateTime    @default(now())
   sellerId   Int
   providerId Int?
-  note       String?
   from       FromWallet  @default(PROVIDER)
   type       PaymentType @default(PAYMENT)
   holdId     String?     @unique
+  note       String?
   Provider   Provider?   @relation(fields: [providerId], references: [id])
   seller     Seller      @relation(fields: [sellerId], references: [id])
 }
@@ -96,8 +96,8 @@ model Payment {
   providerId     Int?
   activeBy       Json?
   companyPrice   Float?
-  note           String?
   localCard      Json?
+  note           String?
   holdId         String?   @unique
   provider       Provider? @relation(fields: [providerId], references: [id])
   seller         Seller?   @relation(fields: [sellerId], references: [id])
@@ -132,10 +132,11 @@ model Category {
   id        Int        @id @default(autoincrement())
   image     String?
   title     String
+  priority  Int        @default(0)
   active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
   cardTypes CardType[]
   plans     Plan[]
-  createdAt DateTime   @default(now())
 }
 
 model Plan {
@@ -146,11 +147,11 @@ model Plan {
   updatedAt   DateTime      @default(now())
   active      Boolean       @default(true)
   hidden      Boolean       @default(false)
+  categoryId  Int?
   archive     Archive[]
   customPrice CustomPrice[]
-  stock       Stock[]
   category    Category?     @relation(fields: [categoryId], references: [id])
-  categoryId  Int?
+  stock       Stock[]
 }
 
 model CustomPrice {

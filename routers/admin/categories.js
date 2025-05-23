@@ -6,10 +6,10 @@ const router = express.Router();
 
 // Create Plan
 router.post("/", adminAuth, async (req, res) => {
-  const { image, title } = req.body;
+  const { image, title, priority } = req.body;
   try {
     const category = await prisma.category.create({
-      data: { image, title },
+      data: { image, title, priority },
     });
     res.json(category);
   } catch (error) {
@@ -47,7 +47,7 @@ router.get("/", adminAuth, async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        priority: "asc",
       },
     });
 
@@ -60,11 +60,11 @@ router.get("/", adminAuth, async (req, res) => {
 // Update category by ID
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { image, title } = req.body;
+  const { image, title, priority } = req.body;
   try {
     const category = await prisma.category.update({
       where: { id: Number(id) },
-      data: { image, title },
+      data: { image, title, priority },
     });
     res.json(category);
   } catch (error) {
