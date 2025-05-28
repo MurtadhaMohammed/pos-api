@@ -8,18 +8,18 @@ const adminAuth = require("../../middleware/adminAuth");
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
 // Register Admin
-router.post("/register", async (req, res) => {
-  const { name, username, password, type } = req.body;
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const admin = await prisma.admin.create({
-      data: { name, type, username, password: hashedPassword },
-    });
-    res.json(admin);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// router.post("/register", async (req, res) => {
+//   const { name, username, password, type } = req.body;
+//   try {
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const admin = await prisma.admin.create({
+//       data: { name, type, username, password: hashedPassword },
+//     });
+//     res.json(admin);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 // Register Admin
 router.post("/reset", adminAuth, async (req, res) => {
