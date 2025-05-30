@@ -1097,7 +1097,6 @@ router.get("/report/total", sellerAuth, async (req, res) => {
           break;
       }
 
-    // Fetch payments within the selected date range
     const payments = await prisma.payment.findMany({
       where: {
         createtAt: { gte: start, lte: end },
