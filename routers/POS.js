@@ -12,6 +12,7 @@ const fs = require("fs");
 const dayjs = require("dayjs");
 const { holdCard } = require("../helper/holdCard");
 const { purchase } = require("../helper/purchase");
+const getDateDifferenceType = require("../helper/getDateDifferenceType");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -970,5 +971,152 @@ router.get("/categories", sellerAuth, async (req, res) => {
 //     });
 //   }
 // });
+
+router.get("/report/plans", sellerAuth, async (req, res) => {
+  try {
+    let { filterType, startDate, endDate } = req.query;
+    const sellerId = parseInt(req.user.id, 10);
+
+    // Validate filterType
+    if (!startDate && !["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+      return res.status(400).json({
+        error: "Invalid filterType. Use day, yesterday, week, month, or year.",
+      });
+    }
+
+    const now = dayjs();
+    let start, end;
+
+    if (startDate && endDate) {
+      start = dayjs(startDate).startOf("day").toDate();
+      end = dayjs(endDate).endOf("day").toDate();
+      filterType = getDateDifferenceType(startDate, endDate);
+    } else
+      switch (filterType) {
+        case "day":
+          start = now.startOf("day").toDate();
+          end = now.endOf("day").toDate();
+          break;
+        case "yesterday":
+          start = now.subtract(1, "day").startOf("day").toDate();
+          end = now.subtract(1, "day").endOf("day").toDate();
+          break;
+        case "week":
+          start = now.startOf("week").toDate();
+          end = now.endOf("week").toDate();
+          break;
+        case "month":
+          start = now.startOf("month").toDate();
+          end = now.endOf("month").toDate();
+          break;
+        case "year":
+          start = now.startOf("year").toDate();
+          end = now.endOf("year").toDate();
+          break;
+      }
+
+    const stockSummary = await prisma.stock.groupBy({
+      by: ["planId"],
+      where: {
+        sold_at: { gte: start, lte: end },
+        status: "Sold",
+        sellerId: sellerId || undefined,
+      },
+      _count: {
+        id: true,
+      },
+      _min: {
+        planId: true,
+      },
+    });
+
+    // Fetch plan titles separately and map them to the results
+    const planIds = stockSummary.map((item) => item.planId);
+    const plans = await prisma.plan.findMany({
+      where: { id: { in: planIds } },
+      select: { id: true, title: true },
+    });
+
+    // Merge titles with grouped results
+    const result = stockSummary.map((item) => ({
+      planId: item.planId,
+      title: plans.find((plan) => plan.id === item.planId)?.title || "Unknown",
+      count: item._count.id,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching payments by interval:", error);
+    res.status(500).json({ error: "An error occurred." });
+  }
+});
+
+router.get("/report/total", sellerAuth, async (req, res) => {
+  try {
+    let { filterType, startDate, endDate } = req.query;
+    
+    // console.log("startDate : ", startDate)
+    // console.log("endDate : ", endDate)
+    // console.log("filterType : ", filterType)
+    
+    // Validate filterType
+    if (!startDate && !["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+      return res.status(400).json({
+        error: "Invalid filterType. Use day, yesterday, week, month, or year.",
+      });
+    }
+    
+    const now = dayjs();
+    let start, end;
+    
+    if (startDate && endDate) {
+      start = dayjs(startDate).startOf("day").toDate();
+      end = dayjs(endDate).endOf("day").toDate();
+      filterType = getDateDifferenceType(startDate, endDate);
+    } else
+      switch (filterType) {
+        case "day":
+          start = now.startOf("day").toDate();
+          end = now.endOf("day").toDate();
+          break;
+        case "yesterday":
+          start = now.subtract(1, "day").startOf("day").toDate();
+          end = now.subtract(1, "day").endOf("day").toDate();
+          break;
+        case "week":
+          start = now.startOf("week").toDate();
+          end = now.endOf("week").toDate();
+          break;
+        case "month":
+          start = now.startOf("month").toDate();
+          end = now.endOf("month").toDate();
+          break;
+        case "year":
+          start = now.startOf("year").toDate();
+          end = now.endOf("year").toDate();
+          break;
+      }
+
+    // Fetch payments within the selected date range
+    const payments = await prisma.payment.findMany({
+      where: {
+        createtAt: { gte: start, lte: end },
+        sellerId: parseInt(req.user.id, 10) || undefined,
+      },
+      select: { createtAt: true, price: true, companyPrice: true, qty: true },
+    });
+
+    const total = payments.reduce(
+      (sum, curr) => sum + (curr.companyPrice || 0) * (curr.qty || 1),
+      0
+    );
+    res.status(200).json({
+      total,
+    });
+  } catch (error) {
+    console.error("Error fetching payments by interval:", error);
+    res.status(500).json({ error: "An error occurred." });
+  }
+});
 
 module.exports = router;
