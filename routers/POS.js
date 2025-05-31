@@ -731,8 +731,7 @@ router.post("/active", sellerAuth, async (req, res) => {
     );
 
     let data = await response.json();
-    console.log({data})
-    console.log({token: process.env.ACTIVE_TOKEN})
+    console.log({token: process.env.ACTIVE_TOKEN || "NO TOKEN"})
 
     if (response.status === 200 && !isHajji) {
       await prisma.payment.update({
