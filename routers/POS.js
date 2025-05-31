@@ -75,6 +75,52 @@ router.post("/login", async (req, res) => {
   res.json({ token, ...seller, password: "You can't see it 😉" });
 });
 
+// Login seller
+router.post("/v2/login", async (req, res) => {
+  const { username, password, device } = req.body;
+
+  const seller = await prisma.seller.findUnique({
+    where: { username, active: true },
+  });
+
+  if (!seller) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  if (seller.device && device !== seller.device) {
+    return res.status(404).json({ error: "Device is already logied.!" });
+  }
+
+  const valid = await bcrypt.compare(password, seller.password);
+
+  if (!valid) {
+    return res.status(401).json({ error: "Invalid password" });
+  }
+
+  const token = jwt.sign(seller, JWT_SECRET);
+  res.json({ token, ...seller, password: "You can't see it 😉" });
+});
+
+// Logout seller
+router.post("/logout", sellerAuth, async (req, res) => {
+  const { device } = req.body;
+  const sellerId = parseInt(req.user.id, 0);
+
+  const seller = await prisma.seller.findUnique({
+    where: { id: sellerId },
+  });
+
+  if (!seller) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  if (seller.device && device !== seller.device) {
+    return res.status(404).json({ error: "You cant do this." });
+  }
+
+  res.status(200).json({ message: "Logout Succefulley.!" });
+});
+
 router.get("/check-seller-active", sellerAuth, async (req, res) => {
   let seller = await prisma.seller.findUnique({
     where: {
@@ -978,7 +1024,10 @@ router.get("/report/plans", sellerAuth, async (req, res) => {
     const sellerId = parseInt(req.user.id, 10);
 
     // Validate filterType
-    if (!startDate && !["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+    if (
+      !startDate &&
+      !["day", "week", "month", "year", "yesterday"].includes(filterType)
+    ) {
       return res.status(400).json({
         error: "Invalid filterType. Use day, yesterday, week, month, or year.",
       });
@@ -1054,21 +1103,24 @@ router.get("/report/plans", sellerAuth, async (req, res) => {
 router.get("/report/total", sellerAuth, async (req, res) => {
   try {
     let { filterType, startDate, endDate } = req.query;
-    
+
     // console.log("startDate : ", startDate)
     // console.log("endDate : ", endDate)
     // console.log("filterType : ", filterType)
-    
+
     // Validate filterType
-    if (!startDate && !["day", "week", "month", "year", "yesterday"].includes(filterType)) {
+    if (
+      !startDate &&
+      !["day", "week", "month", "year", "yesterday"].includes(filterType)
+    ) {
       return res.status(400).json({
         error: "Invalid filterType. Use day, yesterday, week, month, or year.",
       });
     }
-    
+
     const now = dayjs();
     let start, end;
-    
+
     if (startDate && endDate) {
       start = dayjs(startDate).startOf("day").toDate();
       end = dayjs(endDate).endOf("day").toDate();

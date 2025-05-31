@@ -52,6 +52,7 @@ model Seller {
   name          String
   username      String    @unique
   password      String
+  device        String?
   address       String?
   phone         String?
   providerId    Int
