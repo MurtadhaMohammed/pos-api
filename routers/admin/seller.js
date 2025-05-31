@@ -177,7 +177,7 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
-    data: { active },
+    data: { active, device: null },
   });
 
   const socketId = connectedUsers[seller?.id];
@@ -198,7 +198,7 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
 
     const updatedSeller = await prisma.seller.update({
       where: { id: parseInt(id) },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, device: null },
     });
 
     const socketId = connectedUsers[updatedSeller?.id];
