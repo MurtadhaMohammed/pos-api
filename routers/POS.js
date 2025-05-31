@@ -91,6 +91,12 @@ router.post("/v2/login", async (req, res) => {
     return res.status(404).json({ error: "Device is already logied.!" });
   }
 
+  if (!seller.device) {
+    await prisma.seller.update({
+      where: { id: seller?.seller, device },
+    });
+  }
+
   const valid = await bcrypt.compare(password, seller.password);
 
   if (!valid) {
