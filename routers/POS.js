@@ -714,6 +714,7 @@ router.post("/active", sellerAuth, async (req, res) => {
   }
 
   try {
+     console.log({token: process.env.ACTIVE_TOKEN || "NO TOKEN"})
     const response = await fetch(
       // "https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/active-code/device/add-account",
       "https://support.starlineiq.com/api/support/v7/starLine/active-code/device/add-account",
@@ -731,7 +732,7 @@ router.post("/active", sellerAuth, async (req, res) => {
     );
 
     let data = await response.json();
-    console.log({token: process.env.ACTIVE_TOKEN || "NO TOKEN"})
+   
 
     if (response.status === 200 && !isHajji) {
       await prisma.payment.update({
