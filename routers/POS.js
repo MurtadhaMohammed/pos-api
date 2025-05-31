@@ -714,7 +714,7 @@ router.post("/active", sellerAuth, async (req, res) => {
   try {
     const response = await fetch(
       // "https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/active-code/device/add-account",
-      "https://support.starlineiq.com/api/support/v6/starLine/active-code/device/add-account",
+      "https://support.starlineiq.com/api/support/v7/starLine/active-code/device/add-account",
       {
         method: "POST",
         headers: {
@@ -766,7 +766,7 @@ router.post("/refresh", sellerAuth, async (req, res) => {
   try {
     const response = await fetch(
       // `https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/account/refresh/${macAddress}`,
-      `https://support.starlineiq.com/api/support/v6/starLine/active-code/device/refresh/${macAddress}`,
+      `https://support.starlineiq.com/api/support/v7/starLine/active-code/device/refresh/${macAddress}`,
       {
         method: "GET",
         headers: {
