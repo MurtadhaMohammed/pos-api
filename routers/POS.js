@@ -139,6 +139,19 @@ router.get("/check-seller-active", sellerAuth, async (req, res) => {
   else res.json({ success: true });
 });
 
+router.get("/v2/check-seller-active", sellerAuth, async (req, res) => {
+  const device = req.query.device;
+  let seller = await prisma.seller.findUnique({
+    where: {
+      id: parseInt(req?.user?.id),
+      device,
+      active: true,
+    },
+  });
+  if (!seller) res.status(401).json({ success: false, error: "Invalid User!" });
+  else res.json({ success: true });
+});
+
 router.get("/user", sellerAuth, async (req, res) => {
   let seller = await prisma.seller.findUnique({
     where: {
