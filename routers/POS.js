@@ -731,6 +731,7 @@ router.post("/active", sellerAuth, async (req, res) => {
     );
 
     let data = await response.json();
+    console.log({data})
 
     if (response.status === 200 && !isHajji) {
       await prisma.payment.update({
