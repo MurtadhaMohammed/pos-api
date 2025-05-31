@@ -64,7 +64,6 @@ model Seller {
   holdAt        DateTime?
   holdId        String?   @unique
   note          String?
-  device        String?
   payments      Payment[]
   provider      Provider  @relation(fields: [providerId], references: [id])
   stock         Stock[]
