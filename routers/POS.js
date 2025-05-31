@@ -140,7 +140,7 @@ router.get("/check-seller-active", sellerAuth, async (req, res) => {
 });
 
 router.get("/v2/check-seller-active", sellerAuth, async (req, res) => {
-  const device = req.query.device;
+  const device = req.query.deviceId;
   let seller = await prisma.seller.findUnique({
     where: {
       id: parseInt(req?.user?.id),
