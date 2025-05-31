@@ -702,8 +702,8 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
   const { id, isHajji, name, username } = req?.user;
-  const sellerId = parseInt(id, 10)
-  console.log({sellerId, isHajji, name, username, paymentId })
+  const sellerId = parseInt(id, 10);
+  console.log({ sellerId, isHajji, name, username, paymentId });
   if (!macAddress || !activeCode) {
     return res
       .status(400)
@@ -714,7 +714,6 @@ router.post("/active", sellerAuth, async (req, res) => {
   }
 
   try {
-     console.log({token: process.env.ACTIVE_TOKEN || "NO TOKEN"})
     const response = await fetch(
       // "https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/active-code/device/add-account",
       "https://support.starlineiq.com/api/support/v7/starLine/active-code/device/add-account",
@@ -732,7 +731,6 @@ router.post("/active", sellerAuth, async (req, res) => {
     );
 
     let data = await response.json();
-   
 
     if (response.status === 200 && !isHajji) {
       await prisma.payment.update({
