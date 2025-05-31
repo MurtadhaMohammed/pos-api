@@ -93,7 +93,7 @@ router.post("/v2/login", async (req, res) => {
 
   if (!seller.device) {
     await prisma.seller.update({
-      where: { id: seller?.seller, device },
+      where: { id: seller?.id, device },
     });
   }
 
