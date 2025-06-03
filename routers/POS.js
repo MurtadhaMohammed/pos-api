@@ -91,6 +91,13 @@ router.post("/v2/login", async (req, res) => {
     return res.status(404).json({ error: "Device is already logied.!" });
   }
 
+  if (!seller.device) {
+    await prisma.seller.update({
+      where: { id: seller?.id },
+      data: { device },
+    });
+  }
+
   const valid = await bcrypt.compare(password, seller.password);
 
   if (!valid) {
@@ -125,6 +132,19 @@ router.get("/check-seller-active", sellerAuth, async (req, res) => {
   let seller = await prisma.seller.findUnique({
     where: {
       id: parseInt(req?.user?.id),
+      active: true,
+    },
+  });
+  if (!seller) res.status(401).json({ success: false, error: "Invalid User!" });
+  else res.json({ success: true });
+});
+
+router.get("/v2/check-seller-active", sellerAuth, async (req, res) => {
+  const device = req.query.deviceId;
+  let seller = await prisma.seller.findUnique({
+    where: {
+      id: parseInt(req?.user?.id),
+      device,
       active: true,
     },
   });
@@ -681,7 +701,9 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
 
 router.post("/active", sellerAuth, async (req, res) => {
   const { paymentId, macAddress, activeCode } = req.body;
-  const { sellerId, isHajji, name, username } = req?.user;
+  const { id, isHajji, name, username } = req?.user;
+  const sellerId = parseInt(id, 10);
+  console.log({ sellerId, isHajji, name, username, paymentId });
   if (!macAddress || !activeCode) {
     return res
       .status(400)
@@ -693,7 +715,8 @@ router.post("/active", sellerAuth, async (req, res) => {
 
   try {
     const response = await fetch(
-      "https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/active-code/device/add-account",
+      // "https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/active-code/device/add-account",
+      "https://support.starlineiq.com/api/support/v6/starLine/active-code/device/add-account",
       {
         method: "POST",
         headers: {
@@ -744,12 +767,16 @@ router.post("/refresh", sellerAuth, async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/account/refresh/${macAddress}`,
+      // `https://dvbt-api-8-x.admin-panel.co/api/support/v6/starLine/account/refresh/${macAddress}`,
+      "https://support.starlineiq.com/api/support/v6/starLine/active-code/device/refresh",
       {
-        method: "GET",
+        method: "POST",
         headers: {
-          // "Content-Type": "application/json",
+          "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.ACTIVE_TOKEN}`,
+        },
+        body: {
+          macAddress,
         },
       }
     );
