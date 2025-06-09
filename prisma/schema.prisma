@@ -133,9 +133,9 @@ model Category {
   id        Int        @id @default(autoincrement())
   image     String?
   title     String
-  priority  Int        @default(0)
   active    Boolean    @default(true)
   createdAt DateTime   @default(now())
+  priority  Int        @default(0)
   cardTypes CardType[]
   plans     Plan[]
 }
