@@ -1,0 +1,14 @@
+[
+  "read_payment",
+  "create_payment",
+  "update_payment",
+  "delete_payment",
+  "read_seller",
+  "create_seller",
+  "update_seller",
+  "delete_seller",
+  "read_provider",
+  "create_provider",
+  "update_provider",
+  "delete_provider"
+]
