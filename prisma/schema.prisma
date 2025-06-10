@@ -55,6 +55,8 @@ model Seller {
   password      String
   address       String?
   phone         String?
+  otpCode       String?
+  otpUpdateAt   DateTime?
   providerId    Int
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
@@ -138,6 +140,7 @@ model Category {
   title     String
   active    Boolean    @default(true)
   createdAt DateTime   @default(now())
+  priority  Int        @default(0)
   priority  Int        @default(0)
   cardTypes CardType[]
   plans     Plan[]

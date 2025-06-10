@@ -75,6 +75,120 @@ router.post("/login", async (req, res) => {
   res.json({ token, ...seller, password: "You can't see it 😉" });
 });
 
+router.post("/v3/login", async (req, res) => {
+  try {
+    const { phone, device } = req.body;
+
+    const seller = await prisma.seller.findFirst({
+      where: { phone, active: true },
+    });
+
+    if (!seller) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (seller.device && device !== seller.device) {
+      return res.status(404).json({ error: "Device is already logied.!" });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const payload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: `964${phone.replace(/^0+/, "")}`,
+      type: "template",
+      template: {
+        name: "auth",
+        language: { code: "ar" },
+        components: [
+          {
+            type: "body",
+            parameters: [{ type: "text", text: otp }],
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: "0",
+            parameters: [{ type: "text", text: otp }],
+          },
+        ],
+      },
+    };
+
+    const response = await fetch(
+      "https://graph.facebook.com/v22.0/290765060788261/messages",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Failed to send WhatsApp message:", data);
+      return res.status(500).json({ error: "Failed to send OTP via WhatsApp" });
+    }
+
+    await prisma.seller.update({
+      where: { id: seller.id },
+      data: {
+        otpCode: otp,
+        otpUpdateAt: dayjs().toISOString(),
+      },
+    });
+
+    res.json({ message: "OTP sent via WhatsApp" });
+  } catch (err) {
+    console.error("Internal error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/verify", async (req, res) => {
+  try {
+    const { phone, otp, device } = req.body;
+
+    const seller = await prisma.seller.findFirst({
+      where: { phone, active: true },
+    });
+
+    if (!seller) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (seller.otpCode !== otp) {
+      return res.status(400).json({ error: "Invalid OTP code" });
+    }
+
+    const isExpired =
+      new Date().getTime() - new Date(seller.otpUpdateAt).getTime() >
+      5 * 60 * 1000;
+
+    if (isExpired) {
+      return res.status(400).json({ error: "OTP code expired" });
+    }
+
+    if (!seller.device) {
+      await prisma.seller.update({
+        where: { id: seller.id },
+        data: { device, otpCode: null, otpUpdateAt: null },
+      });
+    }
+
+    const token = jwt.sign(seller, JWT_SECRET);
+    res.json({ token, ...seller, password: "You can't see it 😉" });
+  } catch (err) {
+    console.error("OTP verify error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Login seller
 router.post("/v2/login", async (req, res) => {
   const { username, password, device } = req.body;
@@ -113,19 +227,32 @@ router.post("/logout", sellerAuth, async (req, res) => {
   const { device } = req.body;
   const sellerId = parseInt(req.user.id, 0);
 
-  const seller = await prisma.seller.findUnique({
-    where: { id: sellerId },
-  });
+  try {
+    const seller = await prisma.seller.findUnique({
+      where: { id: sellerId },
+    });
 
-  if (!seller) {
-    return res.status(404).json({ error: "User not found" });
+    if (!seller) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (seller.device && device !== seller.device) {
+      return res.status(404).json({ error: "You cant do this." });
+    }
+
+    await prisma.seller.update({
+      where: {
+        id: sellerId,
+      },
+      data: {
+        device: null,
+      },
+    });
+
+    res.status(200).json({ message: "Logout Succefulley.!" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  if (seller.device && device !== seller.device) {
-    return res.status(404).json({ error: "You cant do this." });
-  }
-
-  res.status(200).json({ message: "Logout Succefulley.!" });
 });
 
 router.get("/check-seller-active", sellerAuth, async (req, res) => {
@@ -223,26 +350,44 @@ router.get("/history", sellerAuth, async (req, res) => {
     });
 
     // Map and format the response
-    let data = payments?.map((el) => {
-      let item = Array.isArray(el?.item) ? el?.item[0] : el?.item;
-      let code = Array.isArray(el?.item)
-        ? el?.item.map((d) => d.code).join(" ,")
-        : el?.item?.code;
-      return {
-        id: el?.id,
-        price: el?.price,
-        qty: el?.qty,
-        companyPrice: el?.companyPrice || el?.price || 0,
-        image: item?.details?.cover,
-        providerId: el?.providerId,
-        companyCardID: el?.companyCardID,
-        createdAt: el?.createtAt,
-        code,
-        note: el?.note,
-        name: item?.details?.title,
-        activeState: el.activeBy?.sellerId ? "active" : "pending",
-      };
-    });
+    const data = await Promise.all(
+      (payments ?? []).map(async (el) => {
+        const item = Array.isArray(el?.item) ? el.item[0] : el?.item;
+
+        const code = Array.isArray(el?.item)
+          ? el.item.map((d) => d.code).join(", ")
+          : el?.item?.code;
+
+        const customPrice = await prisma.customPrice.findUnique({
+          where: {
+            id: el?.localCard?.id,
+          },
+          include: {
+            plan: {
+              include: {
+                category: true,
+              },
+            },
+          },
+        });
+
+        return {
+          id: el?.id,
+          price: el?.price,
+          qty: el?.qty,
+          companyPrice: el?.companyPrice || el?.price || 0,
+          image: item?.details?.cover,
+          providerId: el?.providerId,
+          companyCardID: el?.companyCardID,
+          createdAt: el?.createtAt,
+          code,
+          note: el?.note,
+          name: item?.details?.title,
+          activeState: el?.activeBy?.sellerId ? "active" : "pending",
+          canActive: customPrice?.plan?.category?.id === 1,
+        };
+      })
+    );
 
     // Get total count of payments for the seller
     const totalPayments = await prisma.payment.count({
@@ -254,6 +399,7 @@ router.get("/history", sellerAuth, async (req, res) => {
     // Calculate total pages
     const totalPages = Math.ceil(totalPayments / limit);
     // Respond with paginated data and meta information
+
     res.json({
       currentPage: page,
       totalPages: totalPages,
@@ -369,7 +515,11 @@ router.get("/cards", sellerAuth, async (req, res) => {
         },
       },
       include: {
-        plan: true,
+        plan: {
+          include: {
+            category: true,
+          },
+        },
       },
     });
 
@@ -380,7 +530,9 @@ router.get("/cards", sellerAuth, async (req, res) => {
       image: el?.plan?.image,
       name: el?.plan?.title,
       companyCardID: el?.id,
+      canActive: el?.plan?.category?.id === 1,
     }));
+
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -400,7 +552,11 @@ router.get("/cards/:categoryId", sellerAuth, async (req, res) => {
         },
       },
       include: {
-        plan: true,
+        plan: {
+          include: {
+            category: true,
+          },
+        },
       },
     });
 
@@ -411,6 +567,7 @@ router.get("/cards/:categoryId", sellerAuth, async (req, res) => {
       image: el?.plan?.image,
       name: el?.plan?.title,
       companyCardID: el?.id,
+      canActive: el?.plan?.category?.id === 1,
     }));
     res.json(data);
   } catch (error) {
