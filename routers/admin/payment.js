@@ -10,33 +10,34 @@ const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 const router = express.Router();
 
 // Create Payment
-router.post("/", sellerAuth, async (req, res) => {
-  const {
-    companyCardID,
-    price,
-    qty,
-    providerId,
-    sellerId,
-    providerCardID,
-    item,
-  } = req.body;
-  try {
-    const payment = await prisma.payment.create({
-      data: {
-        companyCardID,
-        price,
-        qty,
-        providerId,
-        sellerId,
-        providerCardID,
-        item,
-      },
-    });
-    res.json(payment);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// router.post("/", sellerAuth, async (req, res) => {
+//   const user = req.user;
+  
+//   const {
+//     companyCardID,
+//     price,
+//     qty,
+//     providerCardID,
+//     item,
+//   } = req.body;
+
+//   try {
+//     const payment = await prisma.payment.create({
+//       data: {
+//         companyCardID,
+//         price,
+//         qty,
+//         providerId: user.providerId,
+//         sellerId: user.id,
+//         providerCardID,
+//         item,
+//       },
+//     });
+//     res.json(payment);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 // Create Payment
 // router.post("/create", sellerAuth, async (req, res) => {

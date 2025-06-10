@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Admin {
-  id        Int       @id @default(autoincrement())
-  name      String?
-  username  String    @unique
-  password  String
-  type      AdminType
-  createtAt DateTime  @default(now())
-  provider  Provider?
+  id         Int       @id @default(autoincrement())
+  name       String?
+  username   String    @unique
+  password   String
+  type       AdminType
+  createtAt  DateTime  @default(now())
+  permissons Json?
+  provider   Provider?
 }
 
 model Provider {
@@ -52,7 +53,6 @@ model Seller {
   name          String
   username      String    @unique
   password      String
-  device        String?
   address       String?
   phone         String?
   providerId    Int
@@ -64,6 +64,9 @@ model Seller {
   holdAt        DateTime?
   holdId        String?   @unique
   note          String?
+  device        String?
+  otpCode       String?
+  otpUpdateAt   DateTime?
   payments      Payment[]
   provider      Provider  @relation(fields: [providerId], references: [id])
   stock         Stock[]
