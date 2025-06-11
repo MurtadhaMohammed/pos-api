@@ -68,7 +68,7 @@ router.post("/", adminAuth, async (req, res) => {
       where: {
         planId: parseInt(planId),
         providerId: parseInt(providerId),
-        archiveId: null,
+        archiveId: undefined,
       },
       data: {
         archiveId: archive.id,
