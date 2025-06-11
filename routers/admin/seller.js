@@ -12,7 +12,14 @@ router.post("/", providerAuth, async (req, res) => {
   const { name, username, password, address, phone, providerId, agentId } =
     req.body;
 
+  const permission = req.user.permissons || {};
+
+  if (!permission.create_seller) {
+    return res.status(400).json({ error: "No permission to create sellers" });
+  }
+
   try {
+
     const existingSeller = await prisma.seller.findUnique({
       where: {
         username: username,
@@ -62,6 +69,12 @@ router.get("/", providerAuth, async (req, res) => {
   const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
   const searchQuery = req.query.q || "";
+
+  const permission = req.user.permissons || {};
+
+  if (!permission.read_seller) {
+    return res.status(400).json({ error: "No permission to read sellers" });
+  }
 
   const where = {
     AND: [
@@ -118,6 +131,12 @@ router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { name, username, address, phone } = req.body;
 
+  const permission = req.user.permissons || {};
+
+  if (!permission.update_seller) {
+    return res.status(400).json({ error: "No permission to update sellers" });
+  }
+
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
     data: { name, username, address, phone },
@@ -129,6 +148,12 @@ router.put("/:id", providerAuth, async (req, res) => {
 // get seller report
 router.patch("/report/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
+
+  const permission = req.user.permissons || {};
+
+  if (!permission.read_seller) {
+    return res.status(400).json({ error: "No permission to read seller report" });
+  }
 
   const seller = await prisma.seller.findUnique({
     where: {
@@ -175,6 +200,12 @@ router.put("/active/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
 
+  const permission = req.user.permissons || {};
+
+  if (!permission.update_seller) {
+    return res.status(400).json({ error: "No permission to update sellers" });
+  }
+
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
     data: { active },
@@ -192,6 +223,12 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 router.put("/reset-password/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
+
+  const permission = req.user.permissons || {};
+
+  if (!permission.update_seller) {
+    return res.status(400).json({ error: "No permission to update sellers" });
+  }
 
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -217,6 +254,13 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
 });
 
 router.get("/info", providerAuth, async (req, res) => {
+  const permission = req.user.permissons || {};
+
+  if (!permission.read_seller) {
+    return res.status(400).json({ error: "No permission to get seller info" });
+  }
+
+
   try {
     let { filterType, startDate, endDate } = req.query;
     const now = dayjs();
