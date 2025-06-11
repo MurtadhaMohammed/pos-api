@@ -6,6 +6,13 @@ const router = express.Router();
 
 router.get("/", adminAuth, async (req, res) => {
   try {
+    const userType = req.user.type;
+    const permisson = req.user.permissons || {};
+
+    if (userType == 'ADMIN' && !permisson.read_stock) {
+      return res.status(400).json({ error: "No permission to read stock" });
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const q = req.query.q;
@@ -40,6 +47,12 @@ router.get("/", adminAuth, async (req, res) => {
 router.get("/info", providerAuth, async (req, res) => {
   try {
     let { providerId } = req.query;
+    const userType = req.user.type;
+    const permisson = req.user.permissons || {};
+
+    if (userType == 'ADMIN' && !permisson.stock_info) {
+      return res.status(400).json({ error: "No permission to read stock info" });
+    }
 
     if (
       req?.user?.providerId &&
