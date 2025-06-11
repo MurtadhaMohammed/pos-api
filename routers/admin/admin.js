@@ -45,8 +45,7 @@ router.post("/login", async (req, res) => {
     const admin = await prisma.admin.findUnique({
       where: { username },
       include: { 
-        provider: true,
-        permissons: true
+        provider: true
       },
     });
 
