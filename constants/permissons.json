@@ -10,5 +10,11 @@
   "read_provider",
   "create_provider",
   "update_provider",
-  "delete_provider"
+  "reset_password_provider",
+  "update_price_provider",
+  "read_provider_statistics",
+  "delete_provider",
+  "read_provider_cards",
+  "create_provider_cards",
+  "update_provider_cards"
 ]

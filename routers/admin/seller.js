@@ -13,12 +13,14 @@ router.post("/", providerAuth, async (req, res) => {
     req.body;
 
   const permission = req.user.permissons || {};
+  const userType = req.user.type;
 
-  if (!permission.create_seller) {
-    return res.status(400).json({ error: "No permission to create sellers" });
-  }
-
+ 
   try {
+
+    if (userType == 'ADMIN' && !permission.create_seller) {
+      return res.status(400).json({ error: "No permission to create sellers" });
+    }  
 
     const existingSeller = await prisma.seller.findUnique({
       where: {
@@ -69,89 +71,100 @@ router.get("/", providerAuth, async (req, res) => {
   const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
   const searchQuery = req.query.q || "";
+  const permisson = req.user.permissons || {};
+  const userType = req.user.type;
 
-  const permission = req.user.permissons || {};
 
-  if (!permission.read_seller) {
-    return res.status(400).json({ error: "No permission to read sellers" });
+  try {
+    
+      if (userType == 'ADMIN' && !permisson.read_seller) {
+        return res.status(400).json({ error: "No permission to read sellers" });
+      }
+
+    const where = {
+      AND: [
+        isProvider && !req.query.providerId
+          ? { providerId: parseInt(providerId) }
+          : {},
+        {
+          providerId: parseInt(req?.query?.providerId || 0) || undefined,
+        },
+        {
+          OR: [
+            {
+              name: {
+                contains: searchQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              phone: {
+                contains: searchQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              username: {
+                contains: searchQuery,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const total = await prisma.seller.count({ where });
+    const sellers = await prisma.seller.findMany({
+      where,
+      include: {
+        provider: true,
+        wallet: true,
+      },
+      take,
+      skip,
+      orderBy: {
+        createtAt: "desc",
+      },
+    });
+
+    res.json({ data: sellers, total });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-
-  const where = {
-    AND: [
-      isProvider && !req.query.providerId
-        ? { providerId: parseInt(providerId) }
-        : {},
-      {
-        providerId: parseInt(req?.query?.providerId || 0) || undefined,
-      },
-      {
-        OR: [
-          {
-            name: {
-              contains: searchQuery,
-              mode: "insensitive",
-            },
-          },
-          {
-            phone: {
-              contains: searchQuery,
-              mode: "insensitive",
-            },
-          },
-          {
-            username: {
-              contains: searchQuery,
-              mode: "insensitive",
-            },
-          },
-        ],
-      },
-    ],
-  };
-
-  const total = await prisma.seller.count({ where });
-  const sellers = await prisma.seller.findMany({
-    where,
-    include: {
-      provider: true,
-      wallet: true,
-    },
-    take,
-    skip,
-    orderBy: {
-      createtAt: "desc",
-    },
-  });
-
-  res.json({ data: sellers, total });
 });
 
 // Update seller
 router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { name, username, address, phone } = req.body;
+  const permisson = req.user.permissons || {};
+  const userType = req.user.type;
 
-  const permission = req.user.permissons || {};
+  try {
 
-  if (!permission.update_seller) {
-    return res.status(400).json({ error: "No permission to update sellers" });
+    if (userType == 'ADMIN' && !permisson.update_seller) {
+      return res.status(400).json({ error: "No permission to update sellers" });
+    }
+
+    const seller = await prisma.seller.update({
+      where: { id: parseInt(id) },
+      data: { name, username, address, phone },
+    });
+
+    res.json(seller);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-
-  const seller = await prisma.seller.update({
-    where: { id: parseInt(id) },
-    data: { name, username, address, phone },
-  });
-
-  res.json(seller);
 });
 
 // get seller report
 router.patch("/report/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
 
-  const permission = req.user.permissons || {};
-
-  if (!permission.read_seller) {
+  if (userType == 'ADMIN' && !permisson.read_seller) {
     return res.status(400).json({ error: "No permission to read seller report" });
   }
 
@@ -199,10 +212,10 @@ router.patch("/report/:id", providerAuth, async (req, res) => {
 router.put("/active/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
+  const permisson = req.user.permissons || {};
+  const userType = req.user.type;
 
-  const permission = req.user.permissons || {};
-
-  if (!permission.update_seller) {
+  if (userType == 'ADMIN' && !permisson.update_seller) {
     return res.status(400).json({ error: "No permission to update sellers" });
   }
 
@@ -223,10 +236,10 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 router.put("/reset-password/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
 
-  const permission = req.user.permissons || {};
-
-  if (!permission.update_seller) {
+  if (userType == 'ADMIN' && !permisson.update_seller) {
     return res.status(400).json({ error: "No permission to update sellers" });
   }
 
@@ -254,9 +267,10 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
 });
 
 router.get("/info", providerAuth, async (req, res) => {
-  const permission = req.user.permissons || {};
+  const permisson = req.user.permissons || {};
+  const userType = req.user.type;
 
-  if (!permission.read_seller) {
+  if (userType == 'ADMIN' && !permisson.read_seller) {
     return res.status(400).json({ error: "No permission to get seller info" });
   }
 
