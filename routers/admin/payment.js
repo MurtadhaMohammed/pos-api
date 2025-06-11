@@ -103,7 +103,14 @@ const router = express.Router();
 
 // Read all Payments
 router.get("/", dashboardAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_payment) {
+      return res.status(400).json({ error: "No permission to read payments" });
+    }
     const q = req.query.q || undefined;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -189,61 +196,68 @@ router.get("/", dashboardAuth, async (req, res) => {
 });
 
 // Get payment cards
-router.get("/pos/:id", dashboardAuth, async (req, res) => {
-  const { id } = req.params;
-  const { startDate, endDate } = req.query;
+// router.get("/pos/:id", dashboardAuth, async (req, res) => {
+//   const { id } = req.params;
+//   const { startDate, endDate } = req.query;
 
-  try {
-    const dateFilter =
-      startDate && endDate
-        ? {
-            createtAt: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
-            },
-          }
-        : {};
+//   try {
+//     const dateFilter =
+//       startDate && endDate
+//         ? {
+//             createtAt: {
+//               gte: new Date(startDate),
+//               lte: new Date(endDate),
+//             },
+//           }
+//         : {};
 
-    const payments = await prisma.payment.findMany({
-      where: {
-        sellerId: parseInt(id),
-        ...dateFilter,
-      },
-      select: {
-        item: true,
-        price: true,
-        companyPrice: true,
-      },
-    });
+//     const payments = await prisma.payment.findMany({
+//       where: {
+//         sellerId: parseInt(id),
+//         ...dateFilter,
+//       },
+//       select: {
+//         item: true,
+//         price: true,
+//         companyPrice: true,
+//       },
+//     });
 
-    let data = {
-      total: payments?.length,
-      price: payments?.map((el) => el.price)?.reduce((a, b) => a + b, 0),
-      companyPrice: payments
-        ?.map((el) => el.companyPrice)
-        ?.reduce((a, b) => a + b, 0),
-      details: Object.entries(
-        payments.reduce((acc, current) => {
-          const title = current.item.details.title;
-          if (!acc[title]) {
-            acc[title] = 0;
-          }
-          acc[title] += 1;
-          return acc;
-        }, {})
-      ).map(([title, count]) => ({ title, count })),
-    };
+//     let data = {
+//       total: payments?.length,
+//       price: payments?.map((el) => el.price)?.reduce((a, b) => a + b, 0),
+//       companyPrice: payments
+//         ?.map((el) => el.companyPrice)
+//         ?.reduce((a, b) => a + b, 0),
+//       details: Object.entries(
+//         payments.reduce((acc, current) => {
+//           const title = current.item.details.title;
+//           if (!acc[title]) {
+//             acc[title] = 0;
+//           }
+//           acc[title] += 1;
+//           return acc;
+//         }, {})
+//       ).map(([title, count]) => ({ title, count })),
+//     };
 
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+//     res.status(200).json(data);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
   const { paymentId } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
 
   try {
+
+    if (userType == 'ADMIN' && !permisson.refund_payment) {
+      return res.status(400).json({ error: "No permission to refund payment" });
+    }
+
     // Fetch payment and related seller in a single query
     const payment = await prisma.payment.findUnique({
       where: { id: Number(paymentId) },
@@ -312,8 +326,14 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
   }
 });
 
-router.get("/seller", async (req, res) => {
+router.get("/seller", dashboardAuth, async (req, res) => {
   const { sellerId, startDate, endDate } = req.query;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  if (userType == 'ADMIN' && !permisson.payments_by_seller) {
+    return res.status(400).json({ error: "No permission to read payments by seller" });
+  }
 
   if (!sellerId) {
     return res.status(400).json({ error: "sellerId is required." });
@@ -416,7 +436,7 @@ router.get("/seller", async (req, res) => {
 //   res.json({ success: true, numberOfCards, cards: groupedCards });
 // });
 
-router.get("/info/agent/:agentId", async (req, res) => {
+router.get("/info/agent/:agentId", dashboardAuth, async (req, res) => {
   const { agentId } = req.params;
   const { startDate, endDate } = req.query;
 
@@ -483,9 +503,11 @@ router.get("/info/agent/:agentId", async (req, res) => {
   res.json({ success: true, numberOfCards, cards: groupedCards });
 });
 
-router.get("/info/seller/:sellerId", async (req, res) => {
+router.get("/info/seller/:sellerId", dashboardAuth, async (req, res) => {
   const { sellerId } = req.params;
   const { startDate, endDate } = req.query;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
 
   const parsedStartDate = startDate ? dayjs(startDate).startOf("day") : null;
   const parsedEndDate = endDate ? dayjs(endDate).endOf("day") : null;
@@ -510,6 +532,11 @@ router.get("/info/seller/:sellerId", async (req, res) => {
   }
 
   try {
+
+    if (userType == 'ADMIN' && !permisson.payments_info_seller) {
+      return res.status(400).json({ error: "No permission to read payments info for seller" });
+    }
+
     const payments = await prisma.payment.findMany({
       where: whereCondition,
     });
@@ -563,9 +590,20 @@ router.get("/info/seller/:sellerId", async (req, res) => {
   }
 });
 
-router.get("/info/provider/:providerId", async (req, res) => {
+router.get("/info/provider/:providerId", dashboardAuth, async (req, res) => {
   const { providerId } = req.params;
   const { startDate, endDate } = req.query;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  try {
+    if (userType == 'ADMIN' && !permisson.payments_info_provider) {
+      return res.status(400).json({ error: "No permission to read payments info for provider" });
+    }
+  } catch (error) {
+    console.error("Error fetching provider info:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
 
   const parsedStartDate = startDate ? new Date(startDate) : null;
   const parsedEndDate = endDate ? new Date(endDate) : null;
@@ -655,7 +693,17 @@ router.get("/info/provider/:providerId", async (req, res) => {
 });
 
 router.get("/intervals", providerAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.payments_intervals) {
+      return res.status(400).json({ error: "No permission to read payments intervals" });
+    }
+
     let { filterType, providerId, startDate, endDate } = req.query;
 
     if (
@@ -782,6 +830,13 @@ router.get("/intervals", providerAuth, async (req, res) => {
 });
 
 router.get("/cards", providerAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  if (userType == 'ADMIN' && !permisson.payments_cards) {
+    return res.status(400).json({ error: "No permission to read payments cards" });
+  }
+
   try {
     let { filterType, providerId, startDate, endDate } = req.query;
 

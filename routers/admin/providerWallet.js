@@ -7,7 +7,15 @@ const router = express.Router();
 //create wallet
 router.post("/", adminAuth, async (req, res) => {
   const { amount, providerId, date } = req.body;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.create_provider_wallet) {
+      return res.status(400).json({ error: "No permission to create provider wallet" });
+    }
+
     const provider = await prisma.provider.findUnique({
       where: {
         id: parseInt(providerId),
@@ -42,7 +50,16 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 router.get("/", providerAuth, async (req, res) => {
+
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_provider_wallet) {
+      return res.status(400).json({ error: "No permission to read provider wallet" });
+    }
+
     const take = parseInt(req.query.take || 10);
     const skip = parseInt(req.query.skip || 0);
     const providerId = parseInt(req.query.providerId) || undefined;
@@ -90,7 +107,16 @@ router.get("/", providerAuth, async (req, res) => {
 
 router.get("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_provider_wallet) {
+      return res.status(400).json({ error: "No permission to read provider wallet" });
+    }
+
     const wallet = await prisma.providerWallet.findUnique({
       where: { id: Number(id) },
       include: { provider: true },
@@ -109,8 +135,15 @@ router.get("/:id", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { amount } = req.body;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
 
   try {
+
+    if (userType == 'ADMIN' && !permisson.update_provider_wallet) {
+      return res.status(400).json({ error: "No permission to update provider wallet" });
+    }
+
     const oldWallet = await prisma.providerWallet.findUnique({
       where: { id: Number(id) },
     });
@@ -144,7 +177,15 @@ router.put("/:id", adminAuth, async (req, res) => {
 
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.delete_provider_wallet) {
+      return res.status(400).json({ error: "No permission to delete provider wallet" });
+    }
+
     const wallet = await prisma.providerWallet.findUnique({
       where: { id: Number(id) },
     });

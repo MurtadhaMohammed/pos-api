@@ -8,7 +8,14 @@ const router = express.Router();
 // Create Wallet
 router.post("/", dashboardAuth, async (req, res) => {
   const { amount, sellerId, date, note } = req.body;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
   try {
+
+    if (userType == 'ADMIN' && !permisson.create_seller_wallet) {
+      return res.status(400).json({ error: "No permission to create seller wallet" });
+    }
+
     const sellerIdInt = parseInt(sellerId);
     const seller = await prisma.seller.findUnique({
       where: {
@@ -156,7 +163,15 @@ router.post("/resetHold", providerAuth, async (req, res) => {
 
 // Read all Wallets
 router.get("/", dashboardAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_seller_wallet) {
+      return res.status(400).json({ error: "No permission to read seller wallet" });
+    }
+    
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const sellerId = parseInt(req.query.sellerId) || undefined;
@@ -211,7 +226,15 @@ router.get("/", dashboardAuth, async (req, res) => {
 // Read Wallet by ID
 router.get("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_seller_wallet) {
+      return res.status(400).json({ error: "No permission to read seller wallet" });
+    }
+
     const wallet = await prisma.wallet.findUnique({
       where: { id: Number(id) },
     });
@@ -224,8 +247,15 @@ router.get("/:id", dashboardAuth, async (req, res) => {
 // Delete Wallet by ID
 router.delete("/:id", dashboardAuth, async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
 
   try {
+
+    if (userType == 'ADMIN' && !permisson.delete_seller_wallet) {
+      return res.status(400).json({ error: "No permission to delete seller wallet" });
+    }
+
     const wallet = await prisma.wallet.findUnique({
       where: { id: Number(id) },
       include: {
