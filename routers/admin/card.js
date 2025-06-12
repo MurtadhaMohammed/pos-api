@@ -11,7 +11,13 @@ const fetch = (...args) =>
 // Create Card
 router.post("/", adminAuth, async (req, res) => {
   const { price, providerId, cardTypeId, companyPrice, sellerPrice } = req.body;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+    if (userType == 'ADMIN' && !permisson.create_card) {
+      return res.status(400).json({ error: "No permission to create card" });
+    }
     const card = await prisma.card.create({
       data: { price, providerId, cardTypeId, companyPrice, sellerPrice },
     });
@@ -50,7 +56,16 @@ const getPlanDetails = async (cards) => {
 
 // Read all Cards
 router.get("/", dashboardAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_card) {
+      return res.status(400).json({ error: "No permission to read card" });
+    }
+
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const providerId = parseInt(req.query.providerId);
@@ -100,7 +115,15 @@ router.get("/", dashboardAuth, async (req, res) => {
 // Read Card by ID
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
   try {
+
+    if (userType == 'ADMIN' && !permisson.read_card) {
+      return res.status(400).json({ error: "No permission to read card" });
+    }
+
     const card = await prisma.card.findUnique({ where: { id: Number(id) } });
     res.json(card);
   } catch (error) {
@@ -109,8 +132,14 @@ router.get("/:id", async (req, res) => {
 });
 
 // Read Card by ID
-router.get("/:providerId/:cardTypeId", async (req, res) => {
+router.get("/:providerId/:cardTypeId", dashboardAuth, async (req, res) => {
   const { providerId, cardTypeId } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  if (userType == 'ADMIN' && !permisson.read_card) {
+    return res.status(400).json({ error: "No permission to read card" });
+  }
   try {
     const card = await prisma.card.findFirst({
       where: { providerId: Number(providerId), cardTypeId: Number(cardTypeId) },
@@ -123,6 +152,8 @@ router.get("/:providerId/:cardTypeId", async (req, res) => {
 
 // Update Card by ID
 router.put("/:id", dashboardAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
   const { id } = req.params;
   const { price, providerId, cardTypeId, companyPrice, sellerPrice, active } =
     req.body;
@@ -130,6 +161,11 @@ router.put("/:id", dashboardAuth, async (req, res) => {
   const isProvider = type === "PROVIDER";
 
   try {
+
+    if (userType == 'ADMIN' && !permisson.update_card) {
+      return res.status(400).json({ error: "No permission to update card" });
+    }
+
     const currentCard = await prisma.card.findUnique({
       where: { id: Number(id) },
     });
@@ -153,7 +189,14 @@ router.put("/:id", dashboardAuth, async (req, res) => {
 // Delete Card by ID
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+
+  
   try {
+    if (userType == 'ADMIN' && !permisson.delete_card) {
+      return res.status(400).json({ error: "No permission to delete card" });
+    }
     const card = await prisma.card.delete({ where: { id: Number(id) } });
     res.json(card);
   } catch (error) {

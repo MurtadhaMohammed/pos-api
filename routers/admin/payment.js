@@ -258,7 +258,6 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
       return res.status(400).json({ error: "No permission to refund payment" });
     }
 
-    // Fetch payment and related seller in a single query
     const payment = await prisma.payment.findUnique({
       where: { id: Number(paymentId) },
       include: {
@@ -266,7 +265,6 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
       },
     });
 
-    // Validate payment and seller existence
     if (!payment || !payment.seller) {
       return res.status(404).json({
         success: false,
@@ -274,9 +272,7 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
       });
     }
 
-    // Perform refund transaction
     await prisma.$transaction([
-      // Update seller's wallet amount
       prisma.seller.update({
         where: {
           id: payment.sellerId,
