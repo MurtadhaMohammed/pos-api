@@ -38,5 +38,18 @@
   "payments_info_provider",
   "payments_intervals",
   "payments_cards",
-  "read_category"
+  "read_category",
+  "create_category",
+  "update_category",
+  "delete_category",
+  "category_status",
+  "read_card_type",
+  "create_card_type",
+  "update_card_type",
+  "delete_card_type",
+  "card_type_status",
+  "read_card",
+  "create_card",
+  "update_card",
+  "delete_card"
 ]
