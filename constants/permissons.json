@@ -31,7 +31,6 @@
   "create_plan",
   "update_plan",
   "delete_plan",
-  "read_payment",
   "refund_payment",
   "payments_by_seller",
   "payments_info_seller",
@@ -51,5 +50,7 @@
   "read_card",
   "create_card",
   "update_card",
-  "delete_card"
+  "delete_card",
+  "read_admin_permissions",
+  "update_admin_permissions"
 ]

@@ -22,6 +22,97 @@ const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 //   }
 // });
 
+router.get("/", adminAuth, async (req, res) => {
+  const userType = req.user.type;
+  const permisson = req.user.permissons || {};
+  if (userType == "ADMIN" && !permisson.read_admin_permissions) {
+    return res.status(400).json({ error: "No permission to read admin permissions" });
+  }
+  try {
+    const { skip = 0, take = 10, q = "" } = req.query;
+    const skipNum = parseInt(skip);
+    const takeNum = parseInt(take);
+
+    const where = {
+      type: "ADMIN",
+      ...(q && {
+        username: {
+          contains: q,
+          mode: "insensitive",
+        },
+      }),
+    };
+
+    const [users, totalItems] = await Promise.all([
+      prisma.admin.findMany({
+        where,
+        skip: skipNum,
+        take: takeNum,
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          type: true,
+          permissons: true,
+        },
+        orderBy: {
+          createtAt: "desc",
+        },
+      }),
+      prisma.admin.count({ where }),
+    ]);
+
+    res.json({
+      data: users,
+      totalItems,
+      pageSize: takeNum,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+router.put("/:id/permissions", adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { permissions } = req.body;
+    const userId = parseInt(id);
+    const userType = req.user.type;
+    const permisson = req.user.permissons || {};
+    if (userType == "ADMIN" && !permisson.update_admin_permissions) {
+      return res.status(400).json({ error: "No permission to update admin permissions" });
+    }
+    // Validate permissions object
+    if (!permissions || typeof permissions !== "object") {
+      return res.status(400).json({
+        error: "Permissions must be a valid object",
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.admin.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Update only permissions
+    await prisma.admin.update({
+      where: { id: userId },
+      data: {
+        permissons: permissions,
+      },
+    });
+
+    res.json({ message: "Permissions updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Register Admin
 router.post("/reset", adminAuth, async (req, res) => {
   const { username, password } = req.body;
@@ -44,8 +135,8 @@ router.post("/login", async (req, res) => {
   try {
     const admin = await prisma.admin.findUnique({
       where: { username },
-      include: { 
-        provider: true
+      include: {
+        provider: true,
       },
     });
 
@@ -68,7 +159,7 @@ router.post("/login", async (req, res) => {
       username: admin.username,
       type: admin.type,
       providerId: admin?.provider?.id,
-      ...(admin.type === 'ADMIN' && { permissons: admin.permissons || {} })
+      ...(admin.type === "ADMIN" && { permissons: admin.permissons || {} }),
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "1h" });
@@ -86,5 +177,7 @@ router.get("/permissons", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 module.exports = router;
