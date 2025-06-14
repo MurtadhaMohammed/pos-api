@@ -6,12 +6,6 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
     return { error: "cardId is required" };
   }
 
-  if (quantity > 1) {
-    return {
-      error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
-    };
-  }
-
   const seller = await prisma.seller.findUnique({
     where: { id: sellerId },
     include: {
@@ -26,6 +20,12 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
   if (!seller?.provider?.active) {
     return { error: "Provider is not active!." };
   }
+
+  // if (quantity > 1) {
+  //   return {
+  //     error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
+  //   };
+  // }
 
   const card = await prisma.customPrice.findUnique({
     include: { plan: true },
