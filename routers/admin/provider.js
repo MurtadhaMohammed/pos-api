@@ -428,4 +428,67 @@ router.get("/info/all", providerAuth, async (req, res) => {
   }
 });
 
+router.patch("/report/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const providerId = parseInt(id);
+
+  try {
+    const providerWallet = await prisma.providerWallet.findMany({
+      where: {
+        providerId,
+      },
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+      },
+    });
+
+    const sellerWallet = await prisma.wallet.findMany({
+      where: {
+        providerId,
+      },
+      select: {
+        id: true,
+        amount: true,
+        type: true,
+        date: true,
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    const initProviderWallet = providerWallet
+      ?.map((el) => el?.amount)
+      ?.reduce((a, b) => a + b, 0);
+
+    const initSellerWallet = sellerWallet
+      ?.map((el) => el?.amount)
+      ?.reduce((a, b) => a + b, 0);
+
+    let results = {
+      sellerWallet: sellerWallet?.map((el) => ({
+        id: el?.id,
+        amount: el?.amount,
+        date: el?.date,
+        type: el?.type,
+        sellerName: el?.seller?.name,
+        sellerPhone: el?.seller?.phone,
+      })),
+      providerWallet,
+      initProviderWallet,
+      initSellerWallet,
+    };
+
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;
