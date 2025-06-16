@@ -23,7 +23,7 @@ exports.holdCard = async (cardId, quantity = 1, sellerId, canBuilk = false) => {
 
   // && !seller?.provider?.roles?.bulk
 
-  if (quantity > 1 && canBuilk) {
+  if (quantity > 1 && !canBuilk) {
     return {
       error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
     };
