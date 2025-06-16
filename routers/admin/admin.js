@@ -74,7 +74,7 @@ router.post("/login", otpLimiter, async (req, res) => {
       },
     });
 
-    if (!process.env.IS_DEV) {
+    if (process.env.IS_DEV) {
       return res.json({ message: "OTP sent via WhatsApp", otp });
     }
 
