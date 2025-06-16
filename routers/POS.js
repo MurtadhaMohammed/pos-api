@@ -13,6 +13,7 @@ const dayjs = require("dayjs");
 const { holdCard } = require("../helper/holdCard");
 const { purchase } = require("../helper/purchase");
 const getDateDifferenceType = require("../helper/getDateDifferenceType");
+const { otpLimiter } = require("../middleware/rateLimit");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -75,7 +76,7 @@ router.post("/login", async (req, res) => {
   res.json({ token, ...seller, password: "You can't see it 😉" });
 });
 
-router.post("/v3/login", async (req, res) => {
+router.post("/v3/login", otpLimiter, async (req, res) => {
   try {
     const { phone, device } = req.body;
 

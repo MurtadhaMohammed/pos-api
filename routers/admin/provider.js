@@ -22,6 +22,7 @@ router.post("/", adminAuth, async (req, res) => {
       data: {
         name,
         username,
+        phone,
         password: hashedPassword,
         type: "PROVIDER",
       },
@@ -105,14 +106,30 @@ router.get("/:id", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { name, phone, address } = req.body;
+
   try {
-    const provider = await prisma.provider.update({
-      where: { id: Number(id) },
-      data: { name, phone, address },
+    const providerId = Number(id);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const provider = await tx.provider.update({
+        where: { id: providerId },
+        data: { name, phone, address },
+      });
+
+      if (provider.adminId) {
+        await tx.admin.update({
+          where: { id: provider.adminId },
+          data: { phone },
+        });
+      }
+
+      return provider;
     });
-    res.json(provider);
+
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Transaction error:", error);
+    res.status(500).json({ error: "Failed to update provider/admin" });
   }
 });
 
