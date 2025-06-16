@@ -75,7 +75,7 @@ router.post("/login", async (req, res) => {
     });
 
     if (process.env.IS_DEV) {
-      return res.json({ message: "OTP sent via WhatsApp", otp });
+      return res.json({ message: "OTP sent via WhatsApp", success: true, otp });
     }
 
     const payload = {
@@ -120,7 +120,7 @@ router.post("/login", async (req, res) => {
       return res.status(500).json({ error: "Failed to send OTP via WhatsApp" });
     }
 
-    res.json({ message: "OTP sent via WhatsApp" });
+    res.json({ message: "OTP sent via WhatsApp", success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
