@@ -21,7 +21,9 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
     return { error: "Provider is not active!." };
   }
 
-  if (quantity > 1 && !seller?.provider?.roles?.bulk) {
+  // && !seller?.provider?.roles?.bulk
+
+  if (quantity > 1 ) {
     return {
       error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
     };
