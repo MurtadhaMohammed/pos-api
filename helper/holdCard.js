@@ -1,7 +1,7 @@
 const prisma = require("../prismaClient");
 const { generateCustomHoldId } = require("../helper/generateHoldId");
 
-exports.holdCard = async (cardId, quantity = 1, sellerId) => {
+exports.holdCard = async (cardId, quantity = 1, sellerId, canBuilk = false) => {
   if (!cardId) {
     return { error: "cardId is required" };
   }
@@ -23,7 +23,7 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
 
   // && !seller?.provider?.roles?.bulk
 
-  if (quantity > 1 ) {
+  if (quantity > 1 && canBuilk) {
     return {
       error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
     };
