@@ -43,7 +43,7 @@ router.post("/reset", adminAuth, async (req, res) => {
 });
 
 // Login Admin
-router.post("/login", otpLimiter, async (req, res) => {
+router.post("/login", async (req, res) => {
   const { phone, password } = req.body;
   try {
     const admin = await prisma.admin.findUnique({
