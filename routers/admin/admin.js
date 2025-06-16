@@ -153,8 +153,8 @@ router.post("/verify", async (req, res) => {
     await prisma.admin.update({
       where: { id: admin.id },
       data: {
-        otpCode: otp,
-        otpUpdateAt: dayjs().toISOString(),
+        otpCode: null,
+        otpUpdateAt: null,
       },
     });
 

@@ -76,7 +76,7 @@ router.post("/login", async (req, res) => {
   res.json({ token, ...seller, password: "You can't see it 😉" });
 });
 
-router.post("/v3/login", otpLimiter, async (req, res) => {
+router.post("/v3/login", async (req, res) => {
   try {
     const { phone, device } = req.body;
 
