@@ -165,7 +165,7 @@ router.post("/verify", async (req, res) => {
       providerId: admin?.provider?.id,
     };
 
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "24h" });
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
 
     res.json({ message: "Login successful", token });
   } catch (error) {
