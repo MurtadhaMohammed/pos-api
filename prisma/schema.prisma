@@ -12,14 +12,14 @@ model Admin {
   name        String?
   username    String?
   password    String
-  phone       String?   @unique
-  otpCode     String?
-  otpUpdateAt DateTime?
   type        AdminType
   createtAt   DateTime  @default(now())
   permissions Json?
-  provider    Provider?
+  phone       String?   @unique
   active      Boolean   @default(true)
+  otpCode     String?
+  otpUpdateAt DateTime?
+  provider    Provider?
 }
 
 model Provider {
@@ -142,7 +142,6 @@ model Category {
   title     String
   active    Boolean    @default(true)
   createdAt DateTime   @default(now())
-  priority  Int        @default(0)
   priority  Int        @default(0)
   cardTypes CardType[]
   plans     Plan[]

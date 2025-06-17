@@ -46,7 +46,7 @@ router.post("/reset", adminAuth, async (req, res) => {
 router.post("/login", async (req, res) => {
   const { phone, password } = req.body;
   try {
-    const admin = await prisma.admin.findUnique({
+    const admin = await prisma.admin.findFirst({
       where: { phone, active: true },
       include: { provider: true },
     });
