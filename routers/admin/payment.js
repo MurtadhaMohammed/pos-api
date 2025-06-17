@@ -102,13 +102,12 @@ const router = express.Router();
 // });
 
 // Read all Payments
-router.get("/", dashboardAuth, async (req, res) => {
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+router.get("/", adminAuth , async (req, res) => {
+  const permissions  = req.user.permissions || {};
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_payment) {
+    if (!permissions.includes("read_payment")) {
       return res.status(400).json({ error: "No permission to read payments" });
     }
     const q = req.query.q || undefined;
@@ -247,14 +246,12 @@ router.get("/", dashboardAuth, async (req, res) => {
 //   }
 // });
 
-router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
+router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
   const { paymentId } = req.params;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || {};
 
   try {
-
-    if (userType == 'ADMIN' && !permisson.refund_payment) {
+    if (!permissions.includes("refund_payment")) {
       return res.status(400).json({ error: "No permission to refund payment" });
     }
 
@@ -299,9 +296,7 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
 
       prisma.stock.updateMany({
         where: {
-          code: {
-            in: payment?.item?.map((p) => p.code),
-          },
+          code: payment.item?.code || "",
         },
         data: {
           status: "Ready",
@@ -322,12 +317,11 @@ router.delete("/refund/:paymentId", dashboardAuth, async (req, res) => {
   }
 });
 
-router.get("/seller", dashboardAuth, async (req, res) => {
+router.get("/seller", adminAuth, async (req, res) => {
   const { sellerId, startDate, endDate } = req.query;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || {};
 
-  if (userType == 'ADMIN' && !permisson.payments_by_seller) {
+  if (!permissions.includes("payments_by_seller")) {
     return res.status(400).json({ error: "No permission to read payments by seller" });
   }
 
@@ -432,78 +426,77 @@ router.get("/seller", dashboardAuth, async (req, res) => {
 //   res.json({ success: true, numberOfCards, cards: groupedCards });
 // });
 
-router.get("/info/agent/:agentId", dashboardAuth, async (req, res) => {
-  const { agentId } = req.params;
-  const { startDate, endDate } = req.query;
+// router.get("/info/agent/:agentId", dashboardAuth, async (req, res) => {
+//   const { agentId } = req.params;
+//   const { startDate, endDate } = req.query;
 
-  const parsedStartDate = startDate ? new Date(startDate) : null;
-  const parsedEndDate = endDate ? new Date(endDate) : null;
+//   const parsedStartDate = startDate ? new Date(startDate) : null;
+//   const parsedEndDate = endDate ? new Date(endDate) : null;
 
-  const whereCondition = {
-    agentId: parseInt(agentId),
-  };
+//   const whereCondition = {
+//     agentId: parseInt(agentId),
+//   };
 
-  if (parsedStartDate && parsedEndDate) {
-    whereCondition.createtAt = {
-      gte: parsedStartDate,
-      lte: parsedEndDate,
-    };
-  } else if (parsedStartDate) {
-    whereCondition.createtAt = {
-      gte: parsedStartDate,
-    };
-  } else if (parsedEndDate) {
-    whereCondition.createtAt = {
-      lte: parsedEndDate,
-    };
-  }
+//   if (parsedStartDate && parsedEndDate) {
+//     whereCondition.createtAt = {
+//       gte: parsedStartDate,
+//       lte: parsedEndDate,
+//     };
+//   } else if (parsedStartDate) {
+//     whereCondition.createtAt = {
+//       gte: parsedStartDate,
+//     };
+//   } else if (parsedEndDate) {
+//     whereCondition.createtAt = {
+//       lte: parsedEndDate,
+//     };
+//   }
 
-  const payments = await prisma.payment.findMany({
-    where: whereCondition,
-  });
+//   const payments = await prisma.payment.findMany({
+//     where: whereCondition,
+//   });
 
-  let numberOfCards = payments
-    .map((el) => el?.qty || 0)
-    .reduce((a, b) => a + b, 0);
-  let cards = payments.map((el) => {
-    const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
-    const details = item?.details || {};
+//   let numberOfCards = payments
+//     .map((el) => el?.qty || 0)
+//     .reduce((a, b) => a + b, 0);
+//   let cards = payments.map((el) => {
+//     const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
+//     const details = item?.details || {};
 
-    return {
-      title: details?.title || "Unknown Title",
-      qty: el?.qty || 0,
-      agentPayments: (el?.localCard?.sellerPrice || 0) * (el?.qty || 0),
-      agentProfit:
-        (el?.localCard?.sellerPrice || 0) * (el?.qty || 0) -
-        (el?.localCard?.companyPrice || 0) * (el?.qty || 0),
-    };
-  });
+//     return {
+//       title: details?.title || "Unknown Title",
+//       qty: el?.qty || 0,
+//       agentPayments: (el?.localCard?.sellerPrice || 0) * (el?.qty || 0),
+//       agentProfit:
+//         (el?.localCard?.sellerPrice || 0) * (el?.qty || 0) -
+//         (el?.localCard?.companyPrice || 0) * (el?.qty || 0),
+//     };
+//   });
 
-  const groupedCards = Object.values(
-    cards.reduce((acc, card) => {
-      if (!acc[card.title]) {
-        acc[card.title] = {
-          title: card.title,
-          qty: 0,
-          agentPayments: 0,
-          agentProfit: 0,
-        };
-      }
-      acc[card.title].qty += card.qty;
-      acc[card.title].agentPayments += card.agentPayments;
-      acc[card.title].agentProfit += card.agentProfit;
-      return acc;
-    }, {})
-  );
+//   const groupedCards = Object.values(
+//     cards.reduce((acc, card) => {
+//       if (!acc[card.title]) {
+//         acc[card.title] = {
+//           title: card.title,
+//           qty: 0,
+//           agentPayments: 0,
+//           agentProfit: 0,
+//         };
+//       }
+//       acc[card.title].qty += card.qty;
+//       acc[card.title].agentPayments += card.agentPayments;
+//       acc[card.title].agentProfit += card.agentProfit;
+//       return acc;
+//     }, {})
+//   );
 
-  res.json({ success: true, numberOfCards, cards: groupedCards });
-});
+//   res.json({ success: true, numberOfCards, cards: groupedCards });
+// });
 
-router.get("/info/seller/:sellerId", dashboardAuth, async (req, res) => {
+router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
   const { sellerId } = req.params;
   const { startDate, endDate } = req.query;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || {};
 
   const parsedStartDate = startDate ? dayjs(startDate).startOf("day") : null;
   const parsedEndDate = endDate ? dayjs(endDate).endOf("day") : null;
@@ -529,7 +522,7 @@ router.get("/info/seller/:sellerId", dashboardAuth, async (req, res) => {
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.payments_info_seller) {
+    if (!permissions.includes("payments_info_seller")) {
       return res.status(400).json({ error: "No permission to read payments info for seller" });
     }
 
@@ -586,14 +579,13 @@ router.get("/info/seller/:sellerId", dashboardAuth, async (req, res) => {
   }
 });
 
-router.get("/info/provider/:providerId", dashboardAuth, async (req, res) => {
+router.get("/info/provider/:providerId", adminAuth, async (req, res) => {
   const { providerId } = req.params;
   const { startDate, endDate } = req.query;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || {};
 
   try {
-    if (userType == 'ADMIN' && !permisson.payments_info_provider) {
+    if (!permissions.includes("payments_info_provider")) {
       return res.status(400).json({ error: "No permission to read payments info for provider" });
     }
   } catch (error) {
@@ -688,15 +680,11 @@ router.get("/info/provider/:providerId", dashboardAuth, async (req, res) => {
   res.json({ success: true, numberOfCards, cards: groupedCards });
 });
 
-router.get("/intervals", providerAuth, async (req, res) => {
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
-
-  
-
+router.get("/intervals", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || {};
   try {
 
-    if (userType == 'ADMIN' && !permisson.payments_intervals) {
+    if (!permissions.includes("payments_intervals")) {
       return res.status(400).json({ error: "No permission to read payments intervals" });
     }
 
@@ -825,11 +813,10 @@ router.get("/intervals", providerAuth, async (req, res) => {
   }
 });
 
-router.get("/cards", providerAuth, async (req, res) => {
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+router.get("/cards", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || {};
 
-  if (userType == 'ADMIN' && !permisson.payments_cards) {
+  if (!permissions.includes("payments_cards")) {
     return res.status(400).json({ error: "No permission to read payments cards" });
   }
 

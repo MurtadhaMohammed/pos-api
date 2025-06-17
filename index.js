@@ -62,6 +62,9 @@ app.use("/api/admin/stock", stockRouter);
 app.use("/api/admin/provider-cards", providerCardsRouter);
 app.use("/api/admin/permissions", permissionsRouter);
 
+
+app.use("/api/provider", providerRouter);
+
 //POS APIs
 app.use("/api/pos", POSRouter);
 

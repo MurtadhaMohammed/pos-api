@@ -113,7 +113,7 @@ router.get("/", dashboardAuth, async (req, res) => {
 });
 
 // Read Card by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", dashboardAuth,  async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
   const permisson = req.user.permissons || {};
