@@ -20,6 +20,7 @@ model Admin {
   permissions Json?
   provider    Provider?
   active      Boolean   @default(true)
+  isHajji     Boolean   @default(false)
 }
 
 model Provider {

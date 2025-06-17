@@ -64,6 +64,18 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password!." });
     }
 
+    if (admin.isHajji) {
+      const tokenPayload = {
+        id: admin.id,
+        username: admin.username,
+        type: admin.type,
+        providerId: admin?.provider?.id,
+      };
+
+      const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
+      return res.json({ message: "Login successful", success: true, token });
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     await prisma.admin.update({
