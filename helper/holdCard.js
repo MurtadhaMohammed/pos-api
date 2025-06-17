@@ -1,15 +1,9 @@
 const prisma = require("../prismaClient");
 const { generateCustomHoldId } = require("../helper/generateHoldId");
 
-exports.holdCard = async (cardId, quantity = 1, sellerId) => {
+exports.holdCard = async (cardId, quantity = 1, sellerId, canBuilk = false) => {
   if (!cardId) {
     return { error: "cardId is required" };
-  }
-
-  if (quantity > 1) {
-    return {
-      error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
-    };
   }
 
   const seller = await prisma.seller.findUnique({
@@ -25,6 +19,14 @@ exports.holdCard = async (cardId, quantity = 1, sellerId) => {
 
   if (!seller?.provider?.active) {
     return { error: "Provider is not active!." };
+  }
+
+  // && !seller?.provider?.roles?.bulk
+
+  if (quantity > 1 && !canBuilk) {
+    return {
+      error: "لاتستطيع شراء اكثر من بطاقة بالوقت الحالي!.",
+    };
   }
 
   const card = await prisma.customPrice.findUnique({

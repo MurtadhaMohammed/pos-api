@@ -13,6 +13,7 @@ const dayjs = require("dayjs");
 const { holdCard } = require("../helper/holdCard");
 const { purchase } = require("../helper/purchase");
 const getDateDifferenceType = require("../helper/getDateDifferenceType");
+const { otpLimiter } = require("../middleware/rateLimit");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -1348,6 +1349,42 @@ router.get("/report/total", sellerAuth, async (req, res) => {
   } catch (error) {
     console.error("Error fetching payments by interval:", error);
     res.status(500).json({ error: "An error occurred." });
+  }
+});
+
+router.get("/device/info/:macAddress", async (req, res) => {
+  const { macAddress } = req.params;
+  console.log(macAddress);
+
+  if (!macAddress) {
+    return res.status(500).json({ message: "macAddress is required" });
+  }
+
+  try {
+    const response = await fetch(
+      `https://support.starlineiq.com/api/support/v6/starLine/account/${macAddress}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.ACTIVE_TOKEN}`,
+        },
+      }
+    );
+
+    let data = await response.json();
+
+    console.log(data)
+
+    // Send back the response from the external API
+    res.status(response.status).json(data);
+  } catch (error) {
+    // Handle errors appropriately
+    console.error("Error making request to external API:", error.message);
+    res.status(500).json({
+      message: "Error making request to external API",
+      error: error.message,
+    });
   }
 });
 

@@ -202,6 +202,7 @@ router.patch("/report/:id", providerAuth, async (req, res) => {
       plan: item?.details?.title,
       price: el?.price,
       cost: el?.companyPrice,
+      qty: el?.qty
     };
   });
 

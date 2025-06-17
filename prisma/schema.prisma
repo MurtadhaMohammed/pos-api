@@ -8,14 +8,18 @@ datasource db {
 }
 
 model Admin {
-  id         Int       @id @default(autoincrement())
-  name       String?
-  username   String    @unique
-  password   String
-  type       AdminType
-  createtAt  DateTime  @default(now())
-  permissons Json?
-  provider   Provider?
+  id          Int       @id @default(autoincrement())
+  name        String?
+  username    String?
+  password    String
+  phone       String?   @unique
+  otpCode     String?
+  otpUpdateAt DateTime?
+  type        AdminType
+  createtAt   DateTime  @default(now())
+  permissions Json?
+  provider    Provider?
+  active      Boolean   @default(true)
 }
 
 model Provider {
@@ -55,8 +59,6 @@ model Seller {
   password      String
   address       String?
   phone         String?
-  otpCode       String?
-  otpUpdateAt   DateTime?
   providerId    Int
   walletAmount  Int       @default(0)
   paymentAmount Int       @default(0)
