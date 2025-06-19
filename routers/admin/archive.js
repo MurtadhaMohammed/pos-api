@@ -7,7 +7,13 @@ const dayjs = require("dayjs");
 
 // Create  Archive
 router.post("/", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
   try {
+
+    if (!permissions.includes("superadmin") && !permissions.includes("create_archive")) {
+      return res.status(400).json({ error: "No permission to create archive" });
+    }
+
     if (!req.files) {
       return res.status(400).send("No file uploaded.");
     }
@@ -85,7 +91,14 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 router.get("/", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
+
   try {
+
+    if (!permissions.includes("superadmin") && !permissions.includes("read_archive")) {
+      return res.status(400).json({ error: "No permission to read archive" });
+    }
+
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const planId = parseInt(req.query.planId) || undefined;
@@ -120,7 +133,14 @@ router.get("/", adminAuth, async (req, res) => {
 });
 
 router.delete("/:id", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
+
   try {
+
+    if (!permissions.includes("superadmin") && !permissions.includes("delete_archive")) {
+      return res.status(400).json({ error: "No permission to delete archive" });
+    }
+
     const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
@@ -167,7 +187,14 @@ router.delete("/:id", adminAuth, async (req, res) => {
 });
 
 router.put("/active/:id", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
+
   try {
+
+    if (!permissions.includes("superadmin") && !permissions.includes("archive_status")) {
+      return res.status(400).json({ error: "No permission to archive status" });
+    }
+
     const id = parseInt(req.params.id);
     const { active } = req.body;
     await prisma.archive.update({

@@ -26,7 +26,7 @@ const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 //   }
 // });
 
-// Register Admin
+// Reset Password
 router.post("/reset", adminAuth, async (req, res) => {
   const { username, password } = req.body;
 
@@ -163,7 +163,7 @@ router.post("/verify", async (req, res) => {
       username: admin.username,
       type: admin.type,
       providerId: admin?.provider?.id,
-      ...(admin.type === 'ADMIN' && { permissions: admin.permissions || {} })
+      ...(admin.type === 'ADMIN' && { permissions: admin.permissions || [] })
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
@@ -177,6 +177,43 @@ router.post("/verify", async (req, res) => {
 router.get("/permissons", async (req, res) => {
   try {
     res.status(200).json(permissons);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/all", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType == 'ADMIN' || !permissions.includes("superadmin")) {
+    return res.status(400).json({ error: "No permission to read admin!" });
+  }
+
+  try {
+    const admins = await prisma.admin.findMany({
+      where: {
+        active: true
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        phone: true,
+        type: true,
+        active: true,
+        permissions: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            active: true
+          }
+        }
+      }
+    });
+
+    res.status(200).json({ message: "Admins fetched successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

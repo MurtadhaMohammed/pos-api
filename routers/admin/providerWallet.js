@@ -7,12 +7,17 @@ const router = express.Router();
 //create wallet
 router.post("/", adminAuth, async (req, res) => {
   const { amount, providerId, date } = req.body;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.create_provider_wallet) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("create_provider_wallet")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to create provider wallet" });
     }
 
@@ -52,11 +57,17 @@ router.post("/", adminAuth, async (req, res) => {
 router.get("/", providerAuth, async (req, res) => {
 
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_provider_wallet) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_wallet")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read provider wallet" });
     }
 
@@ -108,12 +119,18 @@ router.get("/", providerAuth, async (req, res) => {
 router.get("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_provider_wallet) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_wallet")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read provider wallet" });
     }
 
@@ -136,11 +153,17 @@ router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { amount } = req.body;
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_provider_wallet) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("update_provider_wallet")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider wallet" });
     }
 
@@ -178,11 +201,17 @@ router.put("/:id", adminAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.delete_provider_wallet) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("delete_provider_wallet")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to delete provider wallet" });
     }
 

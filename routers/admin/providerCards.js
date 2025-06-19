@@ -6,32 +6,23 @@ const { holdCard } = require("../../helper/holdCard");
 const { purchase } = require("../../helper/purchase");
 const router = express.Router();
 
-router.get("/:providerId", providerAuth, async (req, res) => {
-  const permisson = req.user.permissons || {}; 
+router.get("/:providerId", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || []; 
   const userType = req.user.type;
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_provider_cards) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_cards")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read provider cards" });
     }
     const take = parseInt(req.query.take) || 8;
     const skip = parseInt(req.query.skip) || 0;
-    const providerId = parseInt(req.params.providerId, 10);
-    const { type } = req?.user;
-    const isProvider = type === "PROVIDER";
-
-    if (isProvider && Number(req?.user?.providerId) !== providerId) {
-      return res.status(401).json({ error: "لاتصير لوتي !." });
-    }
-
-    if (isNaN(providerId)) {
-      return res.status(400).json({ error: "معرف المزود غير صالح!" });
-    }
-
-    const provider = await prisma.provider.findUnique({
-      where: { id: providerId },
-    });
 
     const where = { providerId };
     const total = await prisma.customPrice.count({ where });
@@ -78,10 +69,16 @@ router.get("/:providerId", providerAuth, async (req, res) => {
 });
 
 router.post("/", adminAuth, async (req, res) => {
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if (userType == 'ADMIN' && !permisson.create_provider_cards) {
+  if (
+    userType !== 'ADMIN' || 
+    (
+      !permissions.includes("superadmin") &&
+      !permissions.includes("create_provider_cards")
+    )
+  ) {
     return res.status(400).json({ error: "No permission to update provider cards" });
   }
 
@@ -116,12 +113,18 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 router.put("/:id", providerAuth, async (req, res) => {
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_provider_cards) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("update_provider_cards")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider cards" });
     }
 
@@ -168,12 +171,18 @@ router.put("/:id", providerAuth, async (req, res) => {
 });
 
 router.put("/active/:id", providerAuth, async (req, res) => {
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_provider_cards) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("update_provider_cards")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider cards" });
     }
 
@@ -195,11 +204,17 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 
 router.post("/cardHolder", providerAuth, async (req, res) => {
   const { providerCardId, quantity = 1, sellerId } = req.body;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
 
-    if (userType == 'ADMIN' && !permisson.create_payment) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("create_payment")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to create payment" });
     }
   
@@ -220,11 +235,17 @@ router.post("/purchase", providerAuth, async (req, res) => {
   const { hold_id, sellerId } = req.body;
   const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
-  const permisson = req.user.permissons || {};
   const userType = req.user.type;
+  const permissions = req.user.permissions || [];
   try {
 
-    if (userType == 'ADMIN' && !permisson.create_payment) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("create_payment")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to create payment" });
     }
 

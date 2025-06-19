@@ -1,4 +1,6 @@
 [
+  "superadmin",
+  "superprovider",
   "read_payment",
   "create_payment",
   "update_payment",
@@ -7,10 +9,13 @@
   "create_seller",
   "update_seller",
   "delete_seller",
+  "update_seller_status",
   "reset_password_seller",
+  "read_seller_info",
   "read_provider",
   "create_provider",
   "update_provider",
+  "provider_report",
   "reset_password_provider",
   "update_price_provider",
   "read_provider_statistics",
@@ -52,5 +57,9 @@
   "read_card",
   "create_card",
   "update_card",
-  "delete_card"
+  "delete_card",
+  "read_archive",
+  "create_archive",
+  "archive_status",
+  "delete_archive"
 ]

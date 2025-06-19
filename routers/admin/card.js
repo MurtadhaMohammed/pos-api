@@ -11,11 +11,10 @@ const fetch = (...args) =>
 // Create Card
 router.post("/", adminAuth, async (req, res) => {
   const { price, providerId, cardTypeId, companyPrice, sellerPrice } = req.body;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
-    if (userType == 'ADMIN' && !permisson.create_card) {
+    if (!permissions.includes("superadmin") &&!permissions.includes("create_card")) {
       return res.status(400).json({ error: "No permission to create card" });
     }
     const card = await prisma.card.create({
@@ -55,14 +54,13 @@ const getPlanDetails = async (cards) => {
 };
 
 // Read all Cards
-router.get("/", dashboardAuth, async (req, res) => {
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+router.get("/", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
 
   
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_card) {
+    if (!permissions.includes("superadmin") && !permissions.includes("read_card")) {
       return res.status(400).json({ error: "No permission to read card" });
     }
 
@@ -116,7 +114,7 @@ router.get("/", dashboardAuth, async (req, res) => {
 router.get("/:id", dashboardAuth,  async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permisson = req.user.permissons || [];
 
   try {
 
@@ -135,7 +133,7 @@ router.get("/:id", dashboardAuth,  async (req, res) => {
 router.get("/:providerId/:cardTypeId", dashboardAuth, async (req, res) => {
   const { providerId, cardTypeId } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permisson = req.user.permissons || [];
 
   if (userType == 'ADMIN' && !permisson.read_card) {
     return res.status(400).json({ error: "No permission to read card" });
@@ -153,7 +151,7 @@ router.get("/:providerId/:cardTypeId", dashboardAuth, async (req, res) => {
 // Update Card by ID
 router.put("/:id", dashboardAuth, async (req, res) => {
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permisson = req.user.permissons || [];
   const { id } = req.params;
   const { price, providerId, cardTypeId, companyPrice, sellerPrice, active } =
     req.body;
@@ -190,7 +188,7 @@ router.put("/:id", dashboardAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permisson = req.user.permissons || [];
 
   
   try {

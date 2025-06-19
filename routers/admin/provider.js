@@ -12,13 +12,18 @@ const fetch = (...args) =>
 // insert Provider
 router.post("/", adminAuth, async (req, res) => {
   const { name, phone, address, username, password } = req.body;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
-
   
   try {
 
-    if (userType == 'ADMIN' && !permisson.create_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("create_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to create provider" });
     }
     
@@ -58,12 +63,18 @@ router.post("/", adminAuth, async (req, res) => {
 // Read all Providers
 router.get("/", adminAuth, async (req, res) => {
 
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
  
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read providers" });
     }
 
@@ -109,14 +120,19 @@ router.get("/", adminAuth, async (req, res) => {
 // Read Provider by ID
 router.get("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
-  
   
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read provider" });
     }
 
@@ -133,13 +149,18 @@ router.get("/:id", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { name, phone, address } = req.body;
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
-
  
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("update_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider" });
     }
 
@@ -156,11 +177,18 @@ router.put("/:id", adminAuth, async (req, res) => {
 
 router.put("/active/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("update_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider" });
     }
 
@@ -188,11 +216,17 @@ router.put("/active/:id", adminAuth, async (req, res) => {
 router.put("/reset-password/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  const permisson = req.user.permissons || {};
-  
+
   try {
-    if (userType == 'ADMIN' && !permisson.reset_password_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("reset_password_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider" });
     }
 
@@ -224,29 +258,36 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
 });
 
 // so the provider can see his data in about section
-router.get("/about/:id", dashboardAuth, async (req, res) => {
-  const providerId = req.params.id;
-  try {
-    const provider = await prisma.provider.findUnique({
-      where: { id: parseInt(providerId) },
-    });
-    res.json(provider);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// router.get("/about/:id", dashboardAuth, async (req, res) => {
+//   const providerId = req.params.id;
+//   try {
+//     const provider = await prisma.provider.findUnique({
+//       where: { id: parseInt(providerId) },
+//     });
+//     res.json(provider);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 router.get("/summary/:id", dashboardAuth, async (req, res) => {
   const providerId = req.params.id;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
+
   if (!providerId) {
     return res.status(400).json({ error: "Provider ID is required" });
   }
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read provider" });
     }
     const cards = await prisma.card.findMany({
@@ -313,9 +354,15 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
   const userType = req.user.type;
   const providerId = provider.id;
 
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   try {
-    if (userType == 'ADMIN' && !permisson.update_price_provider) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("update_price_provider")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to update provider price" });
     }
     const card = await prisma.card.findUnique({ where: { id: parseInt(id) } });
@@ -345,12 +392,12 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
 const dayjs = require("dayjs");
 const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 
-router.get("/info/all", providerAuth, async (req, res) => {
+router.get("/info/all", adminAuth, async (req, res) => {
   let { filterType, providerId, startDate, endDate } = req.query;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
-  if (userType == 'ADMIN' && !permisson.read_provider_statistics) {
+
+  if (!permissions.includes("superadmin") && !permissions.includes("read_provider_statistics")) {
     return res.status(400).json({ error: "No permission to read provider statistics" });
   }
 

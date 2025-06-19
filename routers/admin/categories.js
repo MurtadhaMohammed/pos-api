@@ -4,14 +4,13 @@ const adminAuth = require("../../middleware/adminAuth");
 const providerAuth = require("../../middleware/providerAuth");
 const router = express.Router();
 
-// Create Plan
+// Create category
 router.post("/", adminAuth, async (req, res) => {
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   const { image, title, priority } = req.body;
   try {
 
-    if (userType == 'ADMIN' && !permisson.create_category) {
+    if (!permissions.includes("superadmin") && !permissions.includes("create_category")) {
       return res.status(400).json({ error: "No permission to create category" });
     }
 
@@ -26,12 +25,11 @@ router.post("/", adminAuth, async (req, res) => {
 
 // Read all category
 router.get("/", adminAuth, async (req, res) => {
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_category) {
+    if (!permissions.includes("superadmin") && !permissions.includes("read_category")) {
       return res.status(400).json({ error: "No permission to read category" });
     }
   
@@ -76,12 +74,11 @@ router.get("/", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { image, title, priority } = req.body;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || []
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_category) {
+    if (!permissions.includes("superadmin") && !permissions.includes("update_category")) {
     return res.status(400).json({ error: "No permission to update category" });
   }
     const category = await prisma.category.update({
@@ -97,11 +94,10 @@ router.put("/:id", adminAuth, async (req, res) => {
 router.put("/active/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
 
   try {
-    if (userType == "ADMIN" && !permisson.category_status) {
+    if (!permissions.includes("superadmin") && !permissions.includes("category_status")) {
       return res
         .status(400)
         .json({ error: "No permission to update category status" });
@@ -117,15 +113,13 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   }
 });
 
-// Delete Plan by ID
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
-  const userType = req.user.type;
-  const permisson = req.user.permissons || {};
+  const permissions = req.user.permissions || [];
   
   try {
 
-    if (userType == 'ADMIN' && !permisson.delete_category) {
+    if (!permissions.includes("superadmin") && !permissions.includes("delete_category")) {
       return res.status(400).json({ error: "No permission to delete category" });
     }
 

@@ -103,11 +103,11 @@ const router = express.Router();
 
 // Read all Payments
 router.get("/", adminAuth , async (req, res) => {
-  const permissions  = req.user.permissions || {};
+  const permissions  = req.user.permissions || [];
 
   try {
 
-    if (!permissions.includes("read_payment")) {
+    if (!permissions.includes("superadmin") && !permissions.includes("read_payment")) {
       return res.status(400).json({ error: "No permission to read payments" });
     }
     const q = req.query.q || undefined;
@@ -248,10 +248,10 @@ router.get("/", adminAuth , async (req, res) => {
 
 router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
   const { paymentId } = req.params;
-  const permissions = req.user.permissions || {};
+  const permissions = req.user.permissions || [];
 
   try {
-    if (!permissions.includes("refund_payment")) {
+    if (!permissions.includes("superadmin") && !permissions.includes("refund_payment")) {
       return res.status(400).json({ error: "No permission to refund payment" });
     }
 
@@ -319,9 +319,9 @@ router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
 
 router.get("/seller", adminAuth, async (req, res) => {
   const { sellerId, startDate, endDate } = req.query;
-  const permissions = req.user.permissions || {};
+  const permissions = req.user.permissions || [];
 
-  if (!permissions.includes("payments_by_seller")) {
+  if (!permissions.includes("superadmin") && !permissions.includes("payments_by_seller")) {
     return res.status(400).json({ error: "No permission to read payments by seller" });
   }
 
@@ -496,7 +496,7 @@ router.get("/seller", adminAuth, async (req, res) => {
 router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
   const { sellerId } = req.params;
   const { startDate, endDate } = req.query;
-  const permissions = req.user.permissions || {};
+  const permissions = req.user.permissions || [];
 
   const parsedStartDate = startDate ? dayjs(startDate).startOf("day") : null;
   const parsedEndDate = endDate ? dayjs(endDate).endOf("day") : null;
@@ -522,7 +522,7 @@ router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
 
   try {
 
-    if (!permissions.includes("payments_info_seller")) {
+    if (!permissions.includes("superadmin") && !permissions.includes("payments_info_seller")) {
       return res.status(400).json({ error: "No permission to read payments info for seller" });
     }
 
@@ -582,10 +582,10 @@ router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
 router.get("/info/provider/:providerId", adminAuth, async (req, res) => {
   const { providerId } = req.params;
   const { startDate, endDate } = req.query;
-  const permissions = req.user.permissions || {};
+  const permissions = req.user.permissions || [];
 
   try {
-    if (!permissions.includes("payments_info_provider")) {
+    if (!permissions.includes("superadmin") && !permissions.includes("payments_info_provider")) {
       return res.status(400).json({ error: "No permission to read payments info for provider" });
     }
   } catch (error) {
@@ -681,10 +681,10 @@ router.get("/info/provider/:providerId", adminAuth, async (req, res) => {
 });
 
 router.get("/intervals", adminAuth, async (req, res) => {
-  const permissions = req.user.permissions || {};
+  const permissions = req.user.permissions || [];
   try {
 
-    if (!permissions.includes("payments_intervals")) {
+    if (!permissions.includes("superadmin") && !permissions.includes("payments_intervals")) {
       return res.status(400).json({ error: "No permission to read payments intervals" });
     }
 
@@ -814,9 +814,9 @@ router.get("/intervals", adminAuth, async (req, res) => {
 });
 
 router.get("/cards", adminAuth, async (req, res) => {
-  const permissions = req.user.permissions || {};
+  const permissions = req.user.permissions || [];
 
-  if (!permissions.includes("payments_cards")) {
+  if (!permissions.includes("superadmin") && !permissions.includes("payments_cards")) {
     return res.status(400).json({ error: "No permission to read payments cards" });
   }
 
