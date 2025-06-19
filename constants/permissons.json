@@ -1,65 +1,67 @@
 [
   "superadmin",
   "superprovider",
-  "read_payment",
-  "create_payment",
-  "update_payment",
-  "delete_payment",
+  
   "read_seller",
   "create_seller",
   "update_seller",
-  "delete_seller",
   "update_seller_status",
   "reset_password_seller",
   "read_seller_info",
+  
   "read_provider",
   "create_provider",
   "update_provider",
+  "delete_provider",
   "provider_report",
   "reset_password_provider",
   "update_price_provider",
-  "read_provider_statistics",
-  "delete_provider",
+  "read_provider_info",
   "read_provider_cards",
   "create_provider_cards",
   "update_provider_cards",
+  
   "read_seller_wallet",
   "create_seller_wallet",
   "delete_seller_wallet",
-  "read_stock",
-  "stock_info",
   "create_provider_wallet",
   "read_provider_wallet",
   "update_provider_wallet",
   "delete_provider_wallet",
+  
+  "read_stock",
+  "stock_info",
+  
   "read_plan",
-  "plan_status",
   "create_plan",
   "update_plan",
   "delete_plan",
+  "plan_status",
+  
   "read_payment",
   "refund_payment",
-  "payments_by_seller",
-  "payments_info_seller",
-  "payments_info_provider",
-  "payments_intervals",
-  "payments_cards",
+  
   "read_category",
   "create_category",
   "update_category",
   "delete_category",
   "category_status",
+  
   "read_card_type",
   "create_card_type",
   "update_card_type",
   "delete_card_type",
   "card_type_status",
+  
   "read_card",
   "create_card",
   "update_card",
   "delete_card",
+  
   "read_archive",
   "create_archive",
   "archive_status",
-  "delete_archive"
+  "delete_archive",
+
+  "statistics"
 ]

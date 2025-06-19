@@ -397,7 +397,7 @@ router.get("/info/all", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
 
 
-  if (!permissions.includes("superadmin") && !permissions.includes("read_provider_statistics")) {
+  if (!permissions.includes("superadmin") && !permissions.includes("statistics")) {
     return res.status(400).json({ error: "No permission to read provider statistics" });
   }
 

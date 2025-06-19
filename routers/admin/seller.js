@@ -15,7 +15,7 @@ router.post("/", adminAuth, async (req, res) => {
 
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
- 
+
   try {
 
     if (
@@ -185,10 +185,10 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
     userType !== 'ADMIN' || 
     (
       !permissions.includes("superadmin") &&
-      !permissions.includes("read_seller")
+      !permissions.includes("read_seller_info")
     )
   ) {
-    return res.status(400).json({ error: "No permission to read seller report" });
+    return res.status(400).json({ error: "No permission to read seller info report" });
   }
 
   const seller = await prisma.seller.findUnique({
@@ -242,7 +242,7 @@ router.put("/active/:id", adminAuth, async (req, res) => {
     userType !== 'ADMIN' || 
     (
       !permissions.includes("superadmin") &&
-      !permissions.includes("update_seller")
+      !permissions.includes("update_seller_status")
     )
   ) {
     return res.status(400).json({ error: "No permission to update sellers" });

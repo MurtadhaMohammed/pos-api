@@ -186,7 +186,7 @@ router.get("/all", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if (userType == 'ADMIN' || !permissions.includes("superadmin")) {
+  if (userType == 'ADMIN' && !permissions.includes("superadmin")) {
     return res.status(400).json({ error: "No permission to read admin!" });
   }
 
@@ -213,7 +213,56 @@ router.get("/all", adminAuth, async (req, res) => {
       }
     });
 
-    res.status(200).json({ message: "Admins fetched successfully" });
+    res.status(200).json({ data: admins, message: "Admins fetched successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/:id/permissions", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { permissions: newPermissions } = req.body;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to update admin permissions!" });
+  }
+
+  try {
+    const invalidPermissions = newPermissions.filter(
+      (perm) => !permissons.includes(perm)
+    );
+    if (invalidPermissions.length > 0) {
+      return res.status(400).json({
+        error: "Invalid permissions",
+        invalidPermissions,
+      });
+    }
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    const updatedAdmin = await prisma.admin.update({
+      where: { id: parseInt(id) },
+      data: { permissions: newPermissions },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        permissions: true,
+      },
+    });
+
+    res.status(200).json({ 
+      data: updatedAdmin, 
+      message: "Admin permissions updated successfully" 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

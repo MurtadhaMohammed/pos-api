@@ -104,10 +104,17 @@ const router = express.Router();
 // Read all Payments
 router.get("/", adminAuth , async (req, res) => {
   const permissions  = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("read_payment")) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_payment")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to read payments" });
     }
     const q = req.query.q || undefined;
@@ -249,9 +256,16 @@ router.get("/", adminAuth , async (req, res) => {
 router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
   const { paymentId } = req.params;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
-    if (!permissions.includes("superadmin") && !permissions.includes("refund_payment")) {
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("refund_payment")
+      )
+    ) {
       return res.status(400).json({ error: "No permission to refund payment" });
     }
 
@@ -314,68 +328,6 @@ router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
       msg: "Internal server error",
       error: error.message,
     });
-  }
-});
-
-router.get("/seller", adminAuth, async (req, res) => {
-  const { sellerId, startDate, endDate } = req.query;
-  const permissions = req.user.permissions || [];
-
-  if (!permissions.includes("superadmin") && !permissions.includes("payments_by_seller")) {
-    return res.status(400).json({ error: "No permission to read payments by seller" });
-  }
-
-  if (!sellerId) {
-    return res.status(400).json({ error: "sellerId is required." });
-  }
-
-  try {
-    const dateFilter = {};
-
-    if (startDate) {
-      dateFilter.gte = new Date(startDate);
-    }
-
-    if (endDate) {
-      dateFilter.lte = new Date(endDate);
-    }
-
-    const payments = await prisma.payment.findMany({
-      where: {
-        sellerId: parseInt(sellerId),
-        createtAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
-      },
-      include: {
-        seller: true,
-        provider: true,
-        agent: true,
-      },
-    });
-
-    let totalPayment = 0;
-    let totalCompanyPayment = 0;
-    let totalNetProfit = 0;
-
-    payments.forEach((payment) => {
-      totalPayment += payment.price * (payment.qty || 1);
-      totalCompanyPayment += payment.companyPrice * (payment.qty || 1);
-    });
-
-    totalNetProfit = totalPayment - totalCompanyPayment;
-
-    return res.status(200).json({
-      sellerId: sellerId,
-      startDate: startDate || "Not specified",
-      endDate: endDate || "Not specified",
-      totalPayment,
-      cashback: totalNetProfit,
-      payments,
-    });
-  } catch (error) {
-    console.error("Error calculating payments:", error);
-    return res
-      .status(500)
-      .json({ error: "An error occurred while calculating payments." });
   }
 });
 
@@ -497,6 +449,7 @@ router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
   const { sellerId } = req.params;
   const { startDate, endDate } = req.query;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   const parsedStartDate = startDate ? dayjs(startDate).startOf("day") : null;
   const parsedEndDate = endDate ? dayjs(endDate).endOf("day") : null;
@@ -522,8 +475,14 @@ router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("payments_info_seller")) {
-      return res.status(400).json({ error: "No permission to read payments info for seller" });
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_seller_info")
+      )
+    ) {
+      return res.status(400).json({ error: "No permission to read statistics" });
     }
 
     const payments = await prisma.payment.findMany({
@@ -583,10 +542,17 @@ router.get("/info/provider/:providerId", adminAuth, async (req, res) => {
   const { providerId } = req.params;
   const { startDate, endDate } = req.query;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
-    if (!permissions.includes("superadmin") && !permissions.includes("payments_info_provider")) {
-      return res.status(400).json({ error: "No permission to read payments info for provider" });
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_info")
+      )
+    ) {
+      return res.status(400).json({ error: "No permission to read statistics" });
     }
   } catch (error) {
     console.error("Error fetching provider info:", error);
@@ -682,10 +648,18 @@ router.get("/info/provider/:providerId", adminAuth, async (req, res) => {
 
 router.get("/intervals", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
+
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("payments_intervals")) {
-      return res.status(400).json({ error: "No permission to read payments intervals" });
+    if (
+      userType !== 'ADMIN' || 
+      (
+        !permissions.includes("superadmin") &&
+        !permissions.includes("statistics")
+      )
+    ) {
+      return res.status(400).json({ error: "No permission to read statistics" });
     }
 
     let { filterType, providerId, startDate, endDate } = req.query;
@@ -815,9 +789,16 @@ router.get("/intervals", adminAuth, async (req, res) => {
 
 router.get("/cards", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
-  if (!permissions.includes("superadmin") && !permissions.includes("payments_cards")) {
-    return res.status(400).json({ error: "No permission to read payments cards" });
+  if (
+    userType !== 'ADMIN' || 
+    (
+      !permissions.includes("superadmin") &&
+      !permissions.includes("statistics")
+    )
+  ) {
+    return res.status(400).json({ error: "No permission to read statistics" });
   }
 
   try {
