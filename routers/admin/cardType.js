@@ -7,11 +7,11 @@ const router = express.Router();
 router.post("/", adminAuth, async (req, res) => {
   const { image, name, companyCardID } = req.body;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
- 
   try {
 
-    if (!permissions.includes("superadmin") || !permissions.includes("create_card_type")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_card_type"))) {
     return res.status(400).json({ error: "No permission to create card type" });
 
   }
@@ -27,10 +27,10 @@ router.post("/", adminAuth, async (req, res) => {
 // Read all CardTypes
 router.get("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") || !permissions.includes("read_card_type")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_card_type"))) {
       return res.status(400).json({ error: "No permission to read card type" });
     }
     const take = parseInt(req.query.take || 8);
@@ -67,11 +67,11 @@ router.get("/", adminAuth, async (req, res) => {
 router.get("/:id",adminAuth, async (req, res) => {
   const { id } = req.params;
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   
   try {
 
-    if (!permissions.includes("superadmin") || !permissions.includes("read_card_type")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_card_type"))) {
       return res.status(400).json({ error: "No permission to read card type" });
     }
 
@@ -89,10 +89,10 @@ router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { image, name, companyCardID } = req.body;
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") || !permissions.includes("update_card_type")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("update_card_type"))) {
       return res.status(400).json({ error: "No permission to update card type" });
     }
     const cardType = await prisma.cardType.update({
@@ -109,10 +109,10 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") || !permissions.includes("card_type_status")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("card_type_status"))) {
       return res.status(400).json({ error: "No permission to update card type status" });
     }
     const cardType = await prisma.cardType.update({
@@ -129,10 +129,10 @@ router.put("/active/:id", adminAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") || !permissions.includes("delete_card_type")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("delete_card_type"))) {
       return res.status(400).json({ error: "No permission to delete card type" });
     }
     const cardType = await prisma.cardType.delete({

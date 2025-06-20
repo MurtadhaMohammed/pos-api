@@ -9,6 +9,7 @@ const router = express.Router();
 router.get("/:providerId", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || []; 
   const userType = req.user.type;
+  const providerId = parseInt(req.params.providerId, 10);
 
   try {
 
@@ -21,6 +22,11 @@ router.get("/:providerId", adminAuth, async (req, res) => {
     ) {
       return res.status(400).json({ error: "No permission to read provider cards" });
     }
+
+    const provider = await prisma.provider.findUnique({
+      where: { id: providerId },
+    });
+
     const take = parseInt(req.query.take) || 8;
     const skip = parseInt(req.query.skip) || 0;
 
@@ -180,7 +186,7 @@ router.put("/active/:id", providerAuth, async (req, res) => {
       userType !== 'ADMIN' || 
       (
         !permissions.includes("superadmin") &&
-        !permissions.includes("update_provider_cards")
+        !permissions.includes("provider_cards_status")
       )
     ) {
       return res.status(400).json({ error: "No permission to update provider cards" });

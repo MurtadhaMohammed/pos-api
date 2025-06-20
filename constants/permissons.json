@@ -12,14 +12,14 @@
   "read_provider",
   "create_provider",
   "update_provider",
-  "delete_provider",
-  "provider_report",
   "reset_password_provider",
   "update_price_provider",
   "read_provider_info",
   "read_provider_cards",
   "create_provider_cards",
   "update_provider_cards",
+  "provider_cards_status",
+  "read_provider_report",
   
   "read_seller_wallet",
   "create_seller_wallet",
@@ -29,9 +29,8 @@
   "update_provider_wallet",
   "delete_provider_wallet",
   
-  "read_stock",
-  "stock_info",
-  
+  "read_stock",  
+
   "read_plan",
   "create_plan",
   "update_plan",
@@ -40,6 +39,7 @@
   
   "read_payment",
   "refund_payment",
+  "create_payment",
   
   "read_category",
   "create_category",

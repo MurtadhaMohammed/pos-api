@@ -8,9 +8,10 @@ const dayjs = require("dayjs");
 // Create  Archive
 router.post("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("create_archive")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_archive"))) {
       return res.status(400).json({ error: "No permission to create archive" });
     }
 
@@ -92,10 +93,10 @@ router.post("/", adminAuth, async (req, res) => {
 
 router.get("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("read_archive")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_archive"))) {
       return res.status(400).json({ error: "No permission to read archive" });
     }
 
@@ -134,10 +135,10 @@ router.get("/", adminAuth, async (req, res) => {
 
 router.delete("/:id", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("delete_archive")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("delete_archive"))) {
       return res.status(400).json({ error: "No permission to delete archive" });
     }
 
@@ -188,10 +189,11 @@ router.delete("/:id", adminAuth, async (req, res) => {
 
 router.put("/active/:id", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("archive_status")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("archive_status"))) {
       return res.status(400).json({ error: "No permission to archive status" });
     }
 

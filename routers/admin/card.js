@@ -12,9 +12,9 @@ const fetch = (...args) =>
 router.post("/", adminAuth, async (req, res) => {
   const { price, providerId, cardTypeId, companyPrice, sellerPrice } = req.body;
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   try {
-    if (!permissions.includes("superadmin") &&!permissions.includes("create_card")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") &&!permissions.includes("create_card"))) {
       return res.status(400).json({ error: "No permission to create card" });
     }
     const card = await prisma.card.create({
@@ -56,11 +56,11 @@ const getPlanDetails = async (cards) => {
 // Read all Cards
 router.get("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
-
+  const userType = req.user.type;
   
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("read_card")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_card"))) {
       return res.status(400).json({ error: "No permission to read card" });
     }
 
@@ -114,11 +114,11 @@ router.get("/", adminAuth, async (req, res) => {
 router.get("/:id", dashboardAuth,  async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || [];
+  const permissions = req.user.permissions || [];
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.read_card) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_card"))) {
       return res.status(400).json({ error: "No permission to read card" });
     }
 
@@ -133,9 +133,9 @@ router.get("/:id", dashboardAuth,  async (req, res) => {
 router.get("/:providerId/:cardTypeId", dashboardAuth, async (req, res) => {
   const { providerId, cardTypeId } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || [];
+  const permissions = req.user.permissions || [];
 
-  if (userType == 'ADMIN' && !permisson.read_card) {
+  if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_card"))) {
     return res.status(400).json({ error: "No permission to read card" });
   }
   try {
@@ -151,7 +151,7 @@ router.get("/:providerId/:cardTypeId", dashboardAuth, async (req, res) => {
 // Update Card by ID
 router.put("/:id", dashboardAuth, async (req, res) => {
   const userType = req.user.type;
-  const permisson = req.user.permissons || [];
+  const permissions = req.user.permissions || [];
   const { id } = req.params;
   const { price, providerId, cardTypeId, companyPrice, sellerPrice, active } =
     req.body;
@@ -160,7 +160,7 @@ router.put("/:id", dashboardAuth, async (req, res) => {
 
   try {
 
-    if (userType == 'ADMIN' && !permisson.update_card) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("update_card"))) {
       return res.status(400).json({ error: "No permission to update card" });
     }
 
@@ -188,11 +188,11 @@ router.put("/:id", dashboardAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const userType = req.user.type;
-  const permisson = req.user.permissons || [];
+  const permissions = req.user.permissions || [];
 
   
   try {
-    if (userType == 'ADMIN' && !permisson.delete_card) {
+    if (userType == 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("delete_card"))) {
       return res.status(400).json({ error: "No permission to delete card" });
     }
     const card = await prisma.card.delete({ where: { id: Number(id) } });
@@ -202,8 +202,14 @@ router.delete("/:id", adminAuth, async (req, res) => {
   }
 });
 
-router.post("/cardHolder", dashboardAuth, async (req, res) => {
+router.post("/cardHolder", adminAuth, async (req, res) => {
   const { companyCardTypeId, quantity, sellerId } = req.body;
+  const userType = req.user.type;
+  const permissions = req.user.permissions || [];
+
+  if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_payment"))) {
+    return res.status(400).json({ error: "No permission to create payment" });
+  }
 
   if (!companyCardTypeId) {
     return res.status(400).json({ message: "companyCardTypeId is required" });
@@ -299,8 +305,14 @@ router.post("/cardHolder", dashboardAuth, async (req, res) => {
   }
 });
 
-router.post("/purchase", providerAuth, async (req, res) => {
+router.post("/purchase", adminAuth, async (req, res) => {
   const { hold_id, providerCardID, providerId, sellerId } = req.body;
+  const userType = req.user.type;
+  const permissions = req.user.permissions || [];
+
+  if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_payment"))) {
+    return res.status(400).json({ error: "No permission to create payment" });
+  }
 
   if (!hold_id) {
     return res.status(400).json({ message: "hold_id is required" });

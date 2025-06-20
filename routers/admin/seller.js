@@ -309,7 +309,7 @@ router.get("/info", adminAuth, async (req, res) => {
     userType !== 'ADMIN' || 
     (
       !permissions.includes("superadmin") &&
-      !permissions.includes("read_seller_info")
+      !permissions.includes("statistics")
     )
   ) {
     return res.status(400).json({ error: "No permission to get seller info" });

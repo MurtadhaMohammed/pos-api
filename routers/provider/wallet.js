@@ -251,9 +251,15 @@ router.get("/:id", providerAuth, async (req, res) => {
 router.delete("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { providerId, permissions } = req.user;
+  const userType = req.user.type;
 
   try {
-    if (!permissions.includes("superadmin") && !permissions.includes("delete_seller_wallet")) {
+    if (
+      userType !== 'PROVIDER' || 
+      (
+        !permissions.includes("superprovider") &&
+        !permissions.includes("delete_seller_wallet")) 
+    ){
       return res.status(403).json({ error: "No permission to delete seller wallet" });
     }
 

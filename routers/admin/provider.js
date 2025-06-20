@@ -186,7 +186,7 @@ router.put("/active/:id", adminAuth, async (req, res) => {
       userType !== 'ADMIN' || 
       (
         !permissions.includes("superadmin") &&
-        !permissions.includes("update_provider")
+        !permissions.includes("update_provider_status")
       )
     ) {
       return res.status(400).json({ error: "No permission to update provider" });
@@ -395,9 +395,10 @@ const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 router.get("/info/all", adminAuth, async (req, res) => {
   let { filterType, providerId, startDate, endDate } = req.query;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
 
-  if (!permissions.includes("superadmin") && !permissions.includes("statistics")) {
+  if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("statistics"))) {
     return res.status(400).json({ error: "No permission to read provider statistics" });
   }
 
@@ -539,6 +540,15 @@ router.get("/info/all", adminAuth, async (req, res) => {
 router.patch("/report/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const providerId = parseInt(id);
+  const permissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if(userType !== 'ADMIN' || 
+    (!permissions.includes("superadmin") && 
+    !permissions.includes("read_provider_report"))
+  ) {
+    return res.status(400).json({ error: "No permission to read provider report" });
+  }
 
   try {
     const providerWallet = await prisma.providerWallet.findMany({
