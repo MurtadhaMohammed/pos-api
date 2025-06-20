@@ -20,6 +20,7 @@ model Admin {
   otpCode     String?
   otpUpdateAt DateTime?
   provider    Provider?
+  isHajji     Boolean   @default(false)
 }
 
 model Provider {
