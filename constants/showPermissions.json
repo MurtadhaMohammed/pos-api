@@ -1,0 +1,68 @@
+{
+    "super_roles": [
+      "superadmin",
+      "superprovider"
+    ],
+    "seller_permissions": [
+      "read_seller",
+      "create_seller",
+      "update_seller",
+      "update_seller_status",
+      "reset_password_seller",
+      "read_seller_info"
+    ],
+    "provider_permissions": [
+      "read_provider",
+      "create_provider",
+      "update_provider",
+      "reset_password_provider",
+      "update_price_provider",
+      "read_provider_info",
+      "read_provider_cards",
+      "create_provider_cards",
+      "update_provider_cards",
+      "provider_cards_status",
+      "read_provider_report"
+    ],
+    "wallet_permissions": [
+      "read_seller_wallet",
+      "create_seller_wallet",
+      "delete_seller_wallet",
+      "create_provider_wallet",
+      "read_provider_wallet",
+      "update_provider_wallet",
+      "delete_provider_wallet"
+    ],
+    "stock_permissions": [
+      "read_stock"
+    ],
+    "plan_permissions": [
+      "read_plan",
+      "create_plan",
+      "update_plan",
+      "delete_plan",
+      "plan_status"
+    ],
+    "payment_permissions": [
+      "read_payment",
+      "refund_payment",
+      "create_payment"
+    ],
+    "category_permissions": [
+      "read_category",
+      "create_category",
+      "update_category",
+      "delete_category",
+      "category_status"
+    ],
+    "archive_permissions": [
+      "read_archive",
+      "create_archive",
+      "archive_status",
+      "delete_archive"
+    ],
+    "statistics_permissions": [
+      "statistics"
+    ]
+  }
+  

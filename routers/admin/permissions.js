@@ -3,11 +3,12 @@ const prisma = require("../../prismaClient");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
 const allPermissions = require("../../constants/permissons.json"); // still an array
+const showPermissions = require("../../constants/showPermissions.json"); // grouped permissions
 
-// Get all available permissions
+// Get all available permissions (grouped)
 router.get("/", adminAuth, async (req, res) => {
   try {
-    res.status(200).json(allPermissions);
+    res.status(200).json(showPermissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

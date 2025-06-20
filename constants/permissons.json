@@ -52,7 +52,6 @@
   "update_card_type",
   "delete_card_type",
   "card_type_status",
-  
   "read_card",
   "create_card",
   "update_card",

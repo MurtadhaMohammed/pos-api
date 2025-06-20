@@ -210,6 +210,9 @@ router.get("/all", adminAuth, async (req, res) => {
             active: true
           }
         }
+      },
+      orderBy: {
+        id: 'desc'
       }
     });
 
