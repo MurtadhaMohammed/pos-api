@@ -14,11 +14,11 @@ const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
 // Register Admin
 // router.post("/register", async (req, res) => {
-//   const { name, username, password, type } = req.body;
+//   const { name, phone, username, password, type } = req.body;
 //   try {
 //     const hashedPassword = await bcrypt.hash(password, 10);
 //     const admin = await prisma.admin.create({
-//       data: { name, type, username, password: hashedPassword },
+//       data: { name, phone, type, username, password: hashedPassword },
 //     });
 //     res.json(admin);
 //   } catch (error) {
@@ -163,7 +163,7 @@ router.post("/verify", async (req, res) => {
       username: admin.username,
       type: admin.type,
       providerId: admin?.provider?.id,
-      ...(admin.type === 'ADMIN' && { permissions: admin.permissions || [] })
+      ...(admin.type === "ADMIN" && { permissions: admin.permissions || [] }),
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
@@ -186,14 +186,14 @@ router.get("/all", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if (userType == 'ADMIN' && !permissions.includes("superadmin")) {
+  if (userType == "ADMIN" && !permissions.includes("superadmin")) {
     return res.status(400).json({ error: "No permission to read admin!" });
   }
 
   try {
     const admins = await prisma.admin.findMany({
       where: {
-        active: true
+        active: true,
       },
       select: {
         id: true,
@@ -207,16 +207,18 @@ router.get("/all", adminAuth, async (req, res) => {
           select: {
             id: true,
             name: true,
-            active: true
-          }
-        }
+            active: true,
+          },
+        },
       },
       orderBy: {
-        id: 'desc'
-      }
+        id: "desc",
+      },
     });
 
-    res.status(200).json({ data: admins, message: "Admins fetched successfully" });
+    res
+      .status(200)
+      .json({ data: admins, message: "Admins fetched successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -228,8 +230,10 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
   const userPermissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
-    return res.status(403).json({ error: "No permission to update admin permissions!" });
+  if (userType !== "ADMIN" && !userPermissions.includes("superadmin")) {
+    return res
+      .status(403)
+      .json({ error: "No permission to update admin permissions!" });
   }
 
   try {
@@ -262,9 +266,9 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
       },
     });
 
-    res.status(200).json({ 
-      data: updatedAdmin, 
-      message: "Admin permissions updated successfully" 
+    res.status(200).json({
+      data: updatedAdmin,
+      message: "Admin permissions updated successfully",
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
