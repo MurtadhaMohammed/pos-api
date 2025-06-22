@@ -9,6 +9,7 @@ const dayjs = require("dayjs");
 const { otpLimiter } = require("../../middleware/rateLimit");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
+const allPermissions = require("../../constants/permissons.json");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -37,6 +38,28 @@ router.post("/reset", adminAuth, async (req, res) => {
       data: { password: hashedPassword },
     });
     res.json(admin);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/permissions", adminAuth, async (req, res) => {
+  const id = req.user.id;
+  try {
+    const admin = await prisma.admin.findUnique({
+      where: { id: parseInt(id) },
+    });
+    res
+      .status(200)
+      .json({ success: true, permissions: admin?.permissions || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/permissions/all", adminAuth, async (req, res) => {
+  try {
+    res.status(200).json(allPermissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -197,6 +220,7 @@ router.get("/permissons", async (req, res) => {
 router.get("/all", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
+  const searchQuery = req.query.q || "";
 
   if (userType == "ADMIN" && !permissions.includes("superadmin")) {
     return res.status(400).json({ error: "No permission to read admin!" });
@@ -206,6 +230,27 @@ router.get("/all", adminAuth, async (req, res) => {
     const admins = await prisma.admin.findMany({
       where: {
         active: true,
+        type: "ADMIN",
+        OR: [
+          {
+            name: {
+              contains: searchQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            phone: {
+              contains: searchQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            username: {
+              contains: searchQuery,
+              mode: "insensitive",
+            },
+          },
+        ],
       },
       select: {
         id: true,
@@ -215,13 +260,6 @@ router.get("/all", adminAuth, async (req, res) => {
         type: true,
         active: true,
         permissions: true,
-        provider: {
-          select: {
-            id: true,
-            name: true,
-            active: true,
-          },
-        },
       },
       orderBy: {
         id: "desc",

@@ -14,13 +14,13 @@ model Admin {
   password    String
   type        AdminType
   createtAt   DateTime  @default(now())
-  permissions Json?
-  phone       String?   @unique
   active      Boolean   @default(true)
   otpCode     String?
   otpUpdateAt DateTime?
-  provider    Provider?
+  permissions Json?
+  phone       String?   @unique
   isHajji     Boolean   @default(false)
+  provider    Provider?
 }
 
 model Provider {

@@ -24,7 +24,7 @@ const providerAuth = async (req, res, next) => {
       const user = await prisma.admin.findFirst({
         where: {
           id: decodedUser.id,
-          type: decodedUser.type, 
+          type: decodedUser.type,
         },
         include: { provider: true },
       });
@@ -33,11 +33,16 @@ const providerAuth = async (req, res, next) => {
         return res.status(404).json({ error: "User not found!" });
       }
 
-      if (user.type === "PROVIDER" && (!user.provider || !user.provider.active)) {
-        return res.status(403).json({ error: "Provider account is not active" });
+      if (
+        user.type === "PROVIDER" &&
+        (!user.provider || !user.provider.active)
+      ) {
+        return res
+          .status(403)
+          .json({ error: "Provider account is not active" });
       }
+      req.user = { ...decodedUser, permissions: user?.permissions || [] };
 
-      req.user = decodedUser;
       next();
     } catch (dbError) {
       console.error("Database error:", dbError);

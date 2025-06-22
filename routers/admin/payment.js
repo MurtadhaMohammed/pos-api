@@ -12,7 +12,7 @@ const router = express.Router();
 // Create Payment
 // router.post("/", sellerAuth, async (req, res) => {
 //   const user = req.user;
-  
+
 //   const {
 //     companyCardID,
 //     price,
@@ -102,18 +102,14 @@ const router = express.Router();
 // });
 
 // Read all Payments
-router.get("/", adminAuth , async (req, res) => {
-  const permissions  = req.user.permissions || [];
-  const userType = req.user.type;
+router.get("/", adminAuth, async (req, res) => {
+  const permissions = req.user.permissions || [];
+  // const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_payment")
-      )
+      !permissions.includes("superadmin") &&
+      !permissions.includes("read_payment")
     ) {
       return res.status(400).json({ error: "No permission to read payments" });
     }
@@ -260,11 +256,9 @@ router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
 
   try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("refund_payment")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("refund_payment"))
     ) {
       return res.status(400).json({ error: "No permission to refund payment" });
     }
@@ -474,15 +468,14 @@ router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
   }
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_seller_info")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_seller_info"))
     ) {
-      return res.status(400).json({ error: "No permission to read statistics" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read statistics" });
     }
 
     const payments = await prisma.payment.findMany({
@@ -546,13 +539,13 @@ router.get("/info/provider/:providerId", adminAuth, async (req, res) => {
 
   try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider_info")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_info"))
     ) {
-      return res.status(400).json({ error: "No permission to read statistics" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read statistics" });
     }
   } catch (error) {
     console.error("Error fetching provider info:", error);
@@ -651,15 +644,14 @@ router.get("/intervals", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("statistics")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("statistics"))
     ) {
-      return res.status(400).json({ error: "No permission to read statistics" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read statistics" });
     }
 
     let { filterType, providerId, startDate, endDate } = req.query;
@@ -792,11 +784,8 @@ router.get("/cards", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
-    (
-      !permissions.includes("superadmin") &&
-      !permissions.includes("statistics")
-    )
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") && !permissions.includes("statistics"))
   ) {
     return res.status(400).json({ error: "No permission to read statistics" });
   }

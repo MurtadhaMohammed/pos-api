@@ -7,20 +7,20 @@ const dashboardAuth = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.sendStatus(401); 
+  if (!token) return res.sendStatus(401);
 
   jwt.verify(token, JWT_SECRET, async (err, decodedUser) => {
     if (err) {
       if (err.name === "TokenExpiredError") {
         return res.status(403).json({ error: "JWT token has expired" });
       }
-      return res.sendStatus(403); 
+      return res.sendStatus(403);
     }
 
     try {
       const admin = await prisma.admin.findUnique({
         where: { id: decodedUser.id, username: decodedUser.username },
-        select: { id: true, username: true, type: true }, 
+        select: { id: true, username: true, type: true },
       });
 
       if (!admin) {
@@ -34,11 +34,13 @@ const dashboardAuth = async (req, res, next) => {
         });
 
         if (!provider || !provider.active) {
-          return res.status(403).json({ error: "Provider account is not active" });
+          return res
+            .status(403)
+            .json({ error: "Provider account is not active" });
         }
       }
 
-      req.user = decodedUser; 
+      req.user = { ...decodedUser, permissions: admin?.permissions || [] };
       next();
     } catch (dbError) {
       console.error("Database error:", dbError);
@@ -48,4 +50,3 @@ const dashboardAuth = async (req, res, next) => {
 };
 
 module.exports = dashboardAuth;
-
