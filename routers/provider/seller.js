@@ -1,17 +1,18 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
-const providerAuth = require("../../middleware/providerAuth");
+const providerAuth = require("./middleware/providerAuth");
 const dayjs = require("dayjs");
 const { getSocketInstance, connectedUsers } = require("../../helper/socket");
 const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 const router = express.Router();
 
 router.post("/", providerAuth, async (req, res) => {
-  const { name, username, password, address, phone, providerId } = req.body;
+  
+  const { name, username, password, address, phone } = req.body;
   const permissions = req.user.permissions || [];
-  const userType = req.user.userType;
- 
+  const userType = req.user.type;
+
   try {
 
     if (
@@ -34,6 +35,16 @@ router.post("/", providerAuth, async (req, res) => {
       return res.status(400).json({ error: "Username already exists" });
     }
 
+    const provider = await prisma.provider.findUnique({
+      where: {
+        id: parseInt(req?.user?.providerId),
+      },
+    });
+
+    if (!provider) {
+      return res.status(400).json({ error: "Provider not found" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
 
@@ -44,13 +55,14 @@ router.post("/", providerAuth, async (req, res) => {
         password: hashedPassword,
         phone,
         address,
-        providerId: providerId,
+        providerId: parseInt(provider?.id),
       },
     });
+
     res.status(201).json(seller);
   } catch (error) {
     console.error("Error creating seller:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -58,7 +70,7 @@ router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { name, username, address, phone } = req.body;
   const permissions = req.user.permissions || [];
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   try {
 
@@ -86,13 +98,13 @@ router.put("/:id", providerAuth, async (req, res) => {
 router.patch("/report/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const permissions = req.user.permissions || [];
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   if (
     userType !== 'PROVIDER' || 
     (
       !permissions.includes("superprovider") &&
-      !permissions.includes("read_seller")
+      !permissions.includes("read_seller_report")
     )
   ){
     return res.status(400).json({ error: "No permission to read seller report" });
@@ -142,7 +154,7 @@ router.put("/active/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
   const permissions = req.user.permissions || [];
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   if (
     userType !== 'PROVIDER' || 
@@ -172,7 +184,7 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
   const permissions = req.user.permissions || [];
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   if (
     userType !== 'PROVIDER' || 
@@ -209,7 +221,7 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
 
 router.get("/info", providerAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   if (
     userType !== 'PROVIDER' || 
@@ -306,40 +318,74 @@ router.get("/info", providerAuth, async (req, res) => {
 });
 
 router.get("/", providerAuth, async (req, res) => {
-  const providerId = req.user.providerId;
-  const permissions = req.user.permissions;
-  const userType = req.user.userType;
+  const take = parseInt(req.query.take || 8);
+  const skip = parseInt(req.query.skip || 0);
+  const { type, providerId } = req?.user;
+  const isProvider = type === "PROVIDER";
+  const searchQuery = req.query.q || "";
+  const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("read_seller")
-      )
-    ){
-      return res.status(403).json({ error: "No permission to read sellers" });
-    }
-
-    const sellers = await prisma.seller.findMany({
-      where: {
-        providerId: Number(providerId)
-      },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        address: true,
-        phone: true,
-        walletAmount: true,
-        paymentAmount: true,
-        isHajji: true,
-        active: true,
-        createtAt: true
+    
+      if (
+        userType !== 'PROVIDER' || 
+        (
+          !permissions.includes("superprovider") &&
+          !permissions.includes("read_seller")
+        )
+      ) {
+        return res.status(400).json({ error: "No permission to read sellers" });
       }
+
+    const where = {
+      AND: [
+        isProvider && !req.query.providerId
+          ? { providerId: parseInt(providerId) }
+          : {},
+        {
+          providerId: parseInt(req?.query?.providerId || 0) || undefined,
+        },
+        {
+          OR: [
+            {
+              name: {
+                contains: searchQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              phone: {
+                contains: searchQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              username: {
+                contains: searchQuery,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const total = await prisma.seller.count({ where });
+    const sellers = await prisma.seller.findMany({
+      where,
+      include: {
+        provider: true,
+        wallet: true,
+      },
+      take,
+      skip,
+      orderBy: {
+        createtAt: "desc",
+      },
     });
 
-    res.json(sellers);
+    res.json({ data: sellers, total });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

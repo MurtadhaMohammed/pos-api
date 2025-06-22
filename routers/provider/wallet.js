@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
-const providerAuth = require("../provider/middleware/providerAuth");
+const providerAuth = require("./middleware/providerAuth");
 const { generateCustomHoldId } = require("../../helper/generateHoldId");
 const router = express.Router();
 
@@ -158,7 +158,7 @@ router.post("/resetHold", providerAuth, async (req, res) => {
 router.get("/", providerAuth, async (req, res) => {
   const providerId = req.user.providerId;
   const permissions = req.user.permissions;
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   try {
     if (
@@ -216,7 +216,7 @@ router.get("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const providerId = req.user.providerId;
   const permissions = req.user.permissions;
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   try {
     if (

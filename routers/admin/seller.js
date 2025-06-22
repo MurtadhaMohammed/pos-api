@@ -185,7 +185,7 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
     userType !== 'ADMIN' || 
     (
       !permissions.includes("superadmin") &&
-      !permissions.includes("read_seller_info")
+      !permissions.includes("read_seller_report")
     )
   ) {
     return res.status(400).json({ error: "No permission to read seller info report" });

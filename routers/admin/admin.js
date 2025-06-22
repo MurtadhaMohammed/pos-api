@@ -163,7 +163,7 @@ router.post("/verify", async (req, res) => {
       username: admin.username,
       type: admin.type,
       providerId: admin?.provider?.id,
-      ...(admin.type === 'ADMIN' && { permissions: admin.permissions || [] })
+      permissions: admin.permissions || []
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });

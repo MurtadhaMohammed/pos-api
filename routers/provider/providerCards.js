@@ -1,11 +1,11 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
-const adminAuth = require("../../middleware/adminAuth");
+const providerAuth = require("./middleware/providerAuth");
 const { holdCard } = require("../../helper/holdCard");
 const { purchase } = require("../../helper/purchase");
 const router = express.Router();
 
-router.get("/:providerId", adminAuth, async (req, res) => {
+router.get("/:providerId", providerAuth, async (req, res) => {
   const permissions = req.user.permissions || []; 
   const userType = req.user.type;
   const providerId = parseInt(req.params.providerId, 10);
@@ -13,9 +13,9 @@ router.get("/:providerId", adminAuth, async (req, res) => {
   try {
 
     if (
-      userType !== 'ADMIN' || 
+      userType !== 'PROVIDER' || 
       (
-        !permissions.includes("superadmin") &&
+        !permissions.includes("superprovider") &&
         !permissions.includes("read_provider_cards")
       )
     ) {
@@ -73,14 +73,14 @@ router.get("/:providerId", adminAuth, async (req, res) => {
   }
 });
 
-router.post("/", adminAuth, async (req, res) => {
+router.post("/", providerAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
+    userType !== 'PROVIDER' || 
     (
-      !permissions.includes("superadmin") &&
+      !permissions.includes("superprovider") &&
       !permissions.includes("create_provider_cards")
     )
   ) {
@@ -117,16 +117,16 @@ router.post("/", adminAuth, async (req, res) => {
   }
 });
 
-router.put("/:id", adminAuth, async (req, res) => {
+router.put("/:id", providerAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
   try {
 
     if (
-      userType !== 'ADMIN' || 
+      userType !== 'PROVIDER' || 
       (
-        !permissions.includes("superadmin") &&
+        !permissions.includes("superprovider") &&
         !permissions.includes("update_provider_cards")
       )
     ) {
@@ -175,16 +175,16 @@ router.put("/:id", adminAuth, async (req, res) => {
   }
 });
 
-router.put("/active/:id", adminAuth, async (req, res) => {
+router.put("/active/:id", providerAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
   try {
 
     if (
-      userType !== 'ADMIN' || 
+      userType !== 'PROVIDER' || 
       (
-        !permissions.includes("superadmin") &&
+        !permissions.includes("superprovider") &&
         !permissions.includes("provider_cards_status")
       )
     ) {
@@ -207,16 +207,16 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   }
 });
 
-router.post("/cardHolder", adminAuth, async (req, res) => {
+router.post("/cardHolder", providerAuth, async (req, res) => {
   const { providerCardId, quantity = 1, sellerId } = req.body;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
 
     if (
-      userType !== 'ADMIN' || 
+      userType !== 'PROVIDER' || 
       (
-        !permissions.includes("superadmin") &&
+        !permissions.includes("superprovider") &&
         !permissions.includes("create_payment")
       )
     ) {
@@ -236,7 +236,7 @@ router.post("/cardHolder", adminAuth, async (req, res) => {
   }
 });
 
-router.post("/purchase", adminAuth, async (req, res) => {
+router.post("/purchase", providerAuth, async (req, res) => {
   const { hold_id, sellerId } = req.body;
   const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
@@ -245,9 +245,9 @@ router.post("/purchase", adminAuth, async (req, res) => {
   try {
 
     if (
-      userType !== 'ADMIN' || 
+      userType !== 'PROVIDER' || 
       (
-        !permissions.includes("superadmin") &&
+        !permissions.includes("superprovider") &&
         !permissions.includes("create_payment")
       )
     ) {

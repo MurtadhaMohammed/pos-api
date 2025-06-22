@@ -8,6 +8,8 @@
   "update_seller_status",
   "reset_password_seller",
   "read_seller_info",
+  "read_seller_report",
+  "update_seller_status",
   
   "read_provider",
   "create_provider",
@@ -62,5 +64,7 @@
   "archive_status",
   "delete_archive",
 
-  "statistics"
+  "statistics",
+
+  "provider_read_about"
 ]
