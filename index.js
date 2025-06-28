@@ -68,6 +68,7 @@ app.use("/api/provider", providersRouter);
 
 //POS APIs
 app.use("/api/pos", POSRouter);
+app.use("/api/v2/pos", POSRouter);
 
 cron.schedule("*/15 * * * *", async () => {
   await resetHoldExpired();
