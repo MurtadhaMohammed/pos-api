@@ -283,4 +283,58 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
   }
 });
 
+router.post("/create", adminAuth, async (req, res) => {
+  const { name, username, password, type, phone } = req.body;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to create admin!" });
+  }
+
+  try {
+    if (!name || !username || !password || !type || !phone) {
+      return res.status(400).json({ error: "All fields are required: name, username, password, type, and phone" });
+    }
+
+    const validTypes = ['ADMIN', 'PROVIDER'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ error: "Invalid admin type. Must be either 'ADMIN' or 'PROVIDER'" });
+    }
+
+    const existingAdmin = await prisma.admin.findFirst({
+      where: {
+        OR: [
+          { username },
+          { phone }
+        ]
+      }
+    });
+
+    if (existingAdmin) {
+      return res.status(400).json({ error: "Username or phone number already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await prisma.admin.create({
+      data: { 
+        name, 
+        username, 
+        password: hashedPassword, 
+        type,
+        phone,
+        active: true,
+        permissions: []
+      }
+    });
+
+    res.status(201).json({ 
+      message: "Admin created successfully",
+    });
+  } catch (error) {
+    console.error("Error creating admin:", error);
+    res.status(500).json({ error: "Failed to create admin" });
+  }
+});
+
 module.exports = router;
