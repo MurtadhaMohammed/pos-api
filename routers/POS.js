@@ -976,10 +976,20 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
     const companyName = payment?.seller?.name;
     const invoiceNumber = `#${payment?.id}`;
     const cardName = items[0]?.details?.title;
-    const codes = items?.map((item) => item?.code);
+    // const codes = items?.map((item) => item?.code);
+    const code = items[0]?.code;
+    const stock = await prisma.stock.findFirst({
+      where: {
+        code,
+      },
+    });
+    const codes = [
+      code,
+      ...(stock && stock?.serial !== code ? [stock?.serial] : []),
+    ];
     const price = payment?.price * payment?.qty;
     const date = dayjs(payment?.createtAt).format("YYYY-MM-DD hh:mm A");
-    const phone = "07855551040, 07755551040";
+    const phone = "7998";
 
     const codeStartY = 374; // Starting Y position for the codes
     const codeLineHeight = 60; // Vertical spacing between each code
@@ -1020,8 +1030,8 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
     
         ${codes
           ?.map((code, i) => {
-            const currentY = codeStartY + i * codeLineHeight; // Calculate Y position dynamically
-            return `<text x="50%" y="${currentY}" class="code" text-anchor="middle">${code}</text>`;
+            const currentY = codeStartY + i * codeLineHeight + 10; // Calculate Y position dynamically
+            return `<text x="50%" y="${currentY}" class="${i === 0 ? "code" : ""}" text-anchor="middle">${code}</text>`;
           })
           .join("")}
     
@@ -1041,16 +1051,14 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
         
         <rect x="10" y="${
           codeStartY + codes.length * codeLineHeight + 120
-        }" width="360" height="140" stroke="black" fill="none" stroke-width="2"/>
+        }" width="360" height="100" stroke="black" fill="none" stroke-width="2"/>
         <text x="50%" y="${
           codeStartY + codes.length * codeLineHeight + 160
         }" class="compnay" text-anchor="middle">اذا كانت لديك اي مشكلة</text>
         <text x="50%" y="${
           codeStartY + codes.length * codeLineHeight + 195
-        }" class="msg" text-anchor="middle">تواصل معنا عبر الارقام التالية</text>
-        <text x="50%" y="${
-          codeStartY + codes.length * codeLineHeight + 230
-        }" class="msg" text-anchor="middle">${phone}</text>
+        }" class="msg" text-anchor="middle">تواصل معنا عبر الرقم ${phone}</text>
+      
       </svg>
     `);
 
@@ -1088,12 +1096,12 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
             `invoices/${payment?.sellerId}-invoice.png`,
             (err, data) => {
               if (err) {
-                fs.unlinkSync(`invoices/${payment?.sellerId}-invoice.png`);
+                // fs.unlinkSync(`invoices/${payment?.sellerId}-invoice.png`);
                 console.error("Error reading file:", err);
                 res.status(500).json({ message: "Error reading file" });
               } else {
                 const base64Image = data.toString("base64");
-                fs.unlinkSync(`invoices/${payment?.sellerId}-invoice.png`);
+                // fs.unlinkSync(`invoices/${payment?.sellerId}-invoice.png`);
                 res.status(200).json({ image: base64Image });
               }
             }
@@ -1374,7 +1382,7 @@ router.get("/device/info/:macAddress", async (req, res) => {
 
     let data = await response.json();
 
-    console.log(data)
+    console.log(data);
 
     // Send back the response from the external API
     res.status(response.status).json(data);
