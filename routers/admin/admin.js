@@ -203,6 +203,15 @@ router.get("/all", adminAuth, async (req, res) => {
   }
 
   try {
+    const take = parseInt(req.query.take || 8);
+    const skip = parseInt(req.query.skip || 0);
+    
+    const total = await prisma.admin.count({
+      where: {
+        active: true
+      }
+    });
+    
     const admins = await prisma.admin.findMany({
       where: {
         active: true
@@ -223,12 +232,14 @@ router.get("/all", adminAuth, async (req, res) => {
           }
         }
       },
+      take,
+      skip,
       orderBy: {
         id: 'desc'
       }
     });
 
-    res.status(200).json({ data: admins, message: "Admins fetched successfully" });
+    res.status(200).json({ data: admins, total, message: "Admins fetched successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
