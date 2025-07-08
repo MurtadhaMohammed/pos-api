@@ -52,13 +52,6 @@ router.post("/reset", adminAuth, async (req, res) => {
 
 router.get("/permissions", adminAuth, async (req, res) => {
   const id = req.user.id;
-  const userType = req.user.type;
-  const userPermissions = req.user.permissions || [];
-
-  if (userType !== 'ADMIN' || !userPermissions.includes("superadmin")) {
-    return res.status(403).json({ error: "No permission to read admin permissions!" });
-  }
-
   try {
     const admin = await prisma.admin.findUnique({
       where: { id: parseInt(id) },
