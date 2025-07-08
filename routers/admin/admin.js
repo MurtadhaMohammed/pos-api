@@ -10,7 +10,7 @@ const { otpLimiter } = require("../../middleware/rateLimit");
 const { CodeStatus } = require("@prisma/client");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
-const allPermissions = require("../../constants/permissons.json");
+const allPermissions = require("../../constants/permissions.json");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
