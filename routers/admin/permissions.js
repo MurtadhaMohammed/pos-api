@@ -2,32 +2,12 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
-const allPermissions = require("../../constants/permissons.json"); // still an array
-const showPermissions = require("../../constants/showPermissions.json"); // grouped permissions
+const allPermissions = require("../../constants/permissions.json");
 
-// Get all available permissions (grouped)
 router.get("/", adminAuth, async (req, res) => {
+router.get("/all", adminAuth, async (req, res) => {
   try {
-    res.status(200).json(showPermissions);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get("/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-
-  try {
-    const admin = await prisma.admin.findUnique({
-      where: { id },
-      select: { permissions: true },
-    });
-
-    if (!admin) {
-      return res.status(404).json({ error: "Admin not found" });
-    }
-
-    res.status(200).json(admin.permissions || []);
+    res.status(200).json(allPermissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -38,7 +18,6 @@ router.post("/add/:id", adminAuth, async (req, res) => {
   const { permissions: newPermissions } = req.body;
 
   try {
-    // Validate permissions
     const invalidPermissions = newPermissions.filter(
       (perm) => !allPermissions.includes(perm)
     );
@@ -60,7 +39,9 @@ router.post("/add/:id", adminAuth, async (req, res) => {
 
     const currentPermissions = admin.permissions || [];
 
-    const updatedPermissions = Array.from(new Set([...currentPermissions, ...newPermissions]));
+    const updatedPermissions = Array.from(
+      new Set([...currentPermissions, ...newPermissions])
+    );
 
     const updatedAdmin = await prisma.admin.update({
       where: { id },

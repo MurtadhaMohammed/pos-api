@@ -4,9 +4,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
-const permissons = require("../../constants/permissons.json");
+const permissions = require("../../constants/permissions.json");
 const dayjs = require("dayjs");
 const { otpLimiter } = require("../../middleware/rateLimit");
+const { CodeStatus } = require("@prisma/client");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
@@ -192,9 +193,9 @@ router.post("/verify", async (req, res) => {
   }
 });
 
-router.get("/permissons", async (req, res) => {
+router.get("/permissions", async (req, res) => {
   try {
-    res.status(200).json(permissons);
+    res.status(200).json(permissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -204,24 +205,45 @@ router.get("/all", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if (userType == 'ADMIN' && !permissions.includes("superadmin")) {
-    return res.status(400).json({ error: "No permission to read admin!" });
+  if (userType !== 'ADMIN' && !permissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to read admin!" });
   }
 
   try {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
+    const q = req.query.q || "";
     
-    const total = await prisma.admin.count({
-      where: {
-        active: true
-      }
-    });
+    const where = {
+      active: true,
+      ...(q && {
+        OR: [
+          {
+            name: {
+              contains: q,
+              mode: "insensitive",
+            },
+          },
+          {
+            username: {
+              contains: q,
+              mode: "insensitive",
+            },
+          },
+          {
+            phone: {
+              contains: q,
+              mode: "insensitive",
+            },
+          },
+        ],
+      }),
+    };
+    
+    const total = await prisma.admin.count({ where });
     
     const admins = await prisma.admin.findMany({
-      where: {
-        active: true
-      },
+      where,
       select: {
         id: true,
         name: true,
@@ -245,7 +267,8 @@ router.get("/all", adminAuth, async (req, res) => {
       }
     });
 
-    res.status(200).json({ data: admins, total, message: "Admins fetched successfully" });
+    const response = { data: admins, total, message: "Admins fetched successfully" };
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -268,7 +291,7 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
 
   try {
     const invalidPermissions = newPermissions.filter(
-      (perm) => !permissons.includes(perm)
+      (perm) => !permissions.includes(perm)
     );
     if (invalidPermissions.length > 0) {
       return res.status(400).json({

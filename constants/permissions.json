@@ -5,7 +5,6 @@
   "read_seller",
   "create_seller",
   "update_seller",
-  "update_seller_status",
   "reset_password_seller",
   "read_seller_info",
   "read_seller_report",
