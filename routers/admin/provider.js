@@ -102,14 +102,19 @@ router.get("/", adminAuth, async (req, res) => {
     const total = await prisma.provider.count({ where });
     const providers = await prisma.provider.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        address: true,
+        active: true,
+        createtAt: true,
+        walletAmount:true,
         admin: {
           select: {
             id: true,
             name: true,
             username: true,
-            phone: true,
-            createtAt: true,
           }
         },
       },

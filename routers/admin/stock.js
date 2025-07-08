@@ -34,7 +34,16 @@ router.get("/", adminAuth, async (req, res) => {
     const stock = await prisma.stock.findMany({
       where,
       include: {
-        provider: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+            active: true,
+            createtAt: true,
+          }
+        },
         plan: true,
         archive: true,
       },
