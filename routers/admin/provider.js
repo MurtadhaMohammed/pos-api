@@ -103,7 +103,15 @@ router.get("/", adminAuth, async (req, res) => {
     const providers = await prisma.provider.findMany({
       where,
       include: {
-        admin: true,
+        admin: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            phone: true,
+            createtAt: true,
+          }
+        },
       },
       take,
       skip,

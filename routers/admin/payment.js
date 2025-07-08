@@ -177,8 +177,20 @@ router.get("/", adminAuth , async (req, res) => {
         ],
       },
       include: {
-        seller: true,
-        provider: true,
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            providerId: true,
+          }
+        },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
       },
       skip: skip,
       take: limit,

@@ -4,7 +4,6 @@ const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
 const allPermissions = require("../../constants/permissions.json");
 
-router.get("/", adminAuth, async (req, res) => {
 router.get("/all", adminAuth, async (req, res) => {
   try {
     res.status(200).json(allPermissions);

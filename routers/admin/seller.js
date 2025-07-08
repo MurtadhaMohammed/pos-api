@@ -129,7 +129,16 @@ router.get("/", adminAuth, async (req, res) => {
     const sellers = await prisma.seller.findMany({
       where,
       include: {
-        provider: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+            active: true,
+            createtAt: true,
+          }
+        },
         wallet: true,
       },
       take,
