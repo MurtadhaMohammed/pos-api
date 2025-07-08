@@ -34,7 +34,7 @@ router.post("/reset", adminAuth, async (req, res) => {
   const userPermissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
+  if (userType !== 'ADMIN' || !userPermissions.includes("superadmin")) {
     return res.status(403).json({ error: "No permission to reset admin password!" });
   }
 
@@ -52,6 +52,13 @@ router.post("/reset", adminAuth, async (req, res) => {
 
 router.get("/permissions", adminAuth, async (req, res) => {
   const id = req.user.id;
+  const userType = req.user.type;
+  const userPermissions = req.user.permissions || [];
+
+  if (userType !== 'ADMIN' || !userPermissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to read admin permissions!" });
+  }
+
   try {
     const admin = await prisma.admin.findUnique({
       where: { id: parseInt(id) },
@@ -216,22 +223,13 @@ router.post("/verify", async (req, res) => {
   }
 });
 
-router.get("/permissions", async (req, res) => {
-  try {
-    res.status(200).json(permissions);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.get("/all", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  const searchQuery = req.query.q || "";
 
-  if (userType !== 'ADMIN' && !permissions.includes("superadmin")) {
+  if (userType !== 'ADMIN' || !permissions.includes("superadmin")) {
     return res.status(403).json({ error: "No permission to read admin!" });
-  }
+  }   
 
   try {
     const take = parseInt(req.query.take || 8);
@@ -309,11 +307,11 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
     return res.status(403).json({ error: "You cannot modify your own permissions!" });
   }
 
-  if (userType !== "ADMIN" && !userPermissions.includes("superadmin")) {
+  if (userType !== "ADMIN" || !userPermissions.includes("superadmin")) {
     return res
       .status(403)
       .json({ error: "No permission to update admin permissions!" });
-  }
+  }  
 
   try {
     const invalidPermissions = newPermissions.filter(
