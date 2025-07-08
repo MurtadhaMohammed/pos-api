@@ -29,6 +29,12 @@ const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 // Reset Password
 router.post("/reset", adminAuth, async (req, res) => {
   const { username, password } = req.body;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to reset admin password!" });
+  }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -250,6 +256,11 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
   const { permissions: newPermissions } = req.body;
   const userPermissions = req.user.permissions || [];
   const userType = req.user.type;
+  const userId = req.user.id;
+
+  if (parseInt(id) === userId) {
+    return res.status(403).json({ error: "You cannot modify your own permissions!" });
+  }
 
   if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
     return res.status(403).json({ error: "No permission to update admin permissions!" });
