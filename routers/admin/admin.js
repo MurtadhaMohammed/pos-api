@@ -79,7 +79,7 @@ router.get("/permissions/all", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/permissions", adminAuth, async (req, res) => {
+router.get("/permissions", async (req, res) => {
   try {
     res.status(200).json(permissions);
   } catch (error) {
