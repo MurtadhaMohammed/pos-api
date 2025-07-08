@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
-const providerAuth = require("../provider/middleware/providerAuth");
+const providerAuth = require("./middleware/providerAuth");
 const { generateCustomHoldId } = require("../../helper/generateHoldId");
 const router = express.Router();
 
@@ -73,7 +73,7 @@ const getPlanDetails = async (cards) => {
     const { id } = req.params;
     const providerId = req.user.providerId;
     const permissions = req.user.permissions;
-    const userType = req.user.userType;
+    const userType = req.user.type;
   
     try {
       if (
@@ -150,7 +150,7 @@ const getPlanDetails = async (cards) => {
 
 router.post("/cardHolder", providerAuth, async (req, res) => {
     const { companyCardTypeId, quantity, sellerId } = req.body;
-    const userType = req.user.userType;
+    const userType = req.user.type;
     const permissions = req.user.permissions;
 
     if (
@@ -261,7 +261,7 @@ router.post("/purchase", providerAuth, async (req, res) => {
     const { hold_id, providerCardID, sellerId } = req.body;
     const providerId = req.user.providerId;
     const permissions = req.user.permissions;
-    const userType = req.user.userType;
+    const userType = req.user.type;
   
     if (
         userType !== 'PROVIDER' || 

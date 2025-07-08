@@ -27,7 +27,15 @@ router.post("/", adminAuth, async (req, res) => {
         id: sellerIdInt,
       },
       include: {
-        provider: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            phone: true,
+            createtAt: true,
+          }
+        },
       },
     });
 

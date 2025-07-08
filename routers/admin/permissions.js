@@ -2,7 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
-const allPermissions = require("../../constants/permissons.json");
+const allPermissions = require("../../constants/permissions.json");
 
 router.get("/all", adminAuth, async (req, res) => {
   try {
@@ -17,7 +17,6 @@ router.post("/add/:id", adminAuth, async (req, res) => {
   const { permissions: newPermissions } = req.body;
 
   try {
-    // Validate permissions
     const invalidPermissions = newPermissions.filter(
       (perm) => !allPermissions.includes(perm)
     );

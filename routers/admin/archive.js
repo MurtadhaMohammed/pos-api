@@ -118,7 +118,14 @@ router.get("/", adminAuth, async (req, res) => {
     const archives = await prisma.archive.findMany({
       where,
       include: {
-        provider: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            active: true,
+            createtAt: true,
+          }
+        },
         plan: true,
       },
       take,

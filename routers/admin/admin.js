@@ -4,9 +4,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
-const permissons = require("../../constants/permissons.json");
+const permissions = require("../../constants/permissions.json");
 const dayjs = require("dayjs");
 const { otpLimiter } = require("../../middleware/rateLimit");
+const { CodeStatus } = require("@prisma/client");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const allPermissions = require("../../constants/permissons.json");
@@ -30,6 +31,12 @@ const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 // Reset Password
 router.post("/reset", adminAuth, async (req, res) => {
   const { username, password } = req.body;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to reset admin password!" });
+  }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -198,7 +205,7 @@ router.post("/verify", async (req, res) => {
       username: admin.username,
       type: admin.type,
       providerId: admin?.provider?.id,
-      ...(admin.type === "ADMIN" && { permissions: admin.permissions || [] }),
+      permissions: admin.permissions || []
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
@@ -209,9 +216,9 @@ router.post("/verify", async (req, res) => {
   }
 });
 
-router.get("/permissons", async (req, res) => {
+router.get("/permissions", async (req, res) => {
   try {
-    res.status(200).json(permissons);
+    res.status(200).json(permissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -222,36 +229,45 @@ router.get("/all", adminAuth, async (req, res) => {
   const userType = req.user.type;
   const searchQuery = req.query.q || "";
 
-  if (userType == "ADMIN" && !permissions.includes("superadmin")) {
-    return res.status(400).json({ error: "No permission to read admin!" });
+  if (userType !== 'ADMIN' && !permissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to read admin!" });
   }
 
   try {
-    const admins = await prisma.admin.findMany({
-      where: {
-        active: true,
-        type: "ADMIN",
+    const take = parseInt(req.query.take || 8);
+    const skip = parseInt(req.query.skip || 0);
+    const q = req.query.q || "";
+    
+    const where = {
+      active: true,
+      ...(q && {
         OR: [
           {
             name: {
-              contains: searchQuery,
-              mode: "insensitive",
-            },
-          },
-          {
-            phone: {
-              contains: searchQuery,
+              contains: q,
               mode: "insensitive",
             },
           },
           {
             username: {
-              contains: searchQuery,
+              contains: q,
+              mode: "insensitive",
+            },
+          },
+          {
+            phone: {
+              contains: q,
               mode: "insensitive",
             },
           },
         ],
-      },
+      }),
+    };
+    
+    const total = await prisma.admin.count({ where });
+    
+    const admins = await prisma.admin.findMany({
+      where,
       select: {
         id: true,
         name: true,
@@ -260,15 +276,23 @@ router.get("/all", adminAuth, async (req, res) => {
         type: true,
         active: true,
         permissions: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            active: true
+          }
+        }
       },
+      take,
+      skip,
       orderBy: {
         id: "desc",
       },
     });
 
-    res
-      .status(200)
-      .json({ data: admins, message: "Admins fetched successfully" });
+    const response = { data: admins, total, message: "Admins fetched successfully" };
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -279,6 +303,11 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
   const { permissions: newPermissions } = req.body;
   const userPermissions = req.user.permissions || [];
   const userType = req.user.type;
+  const userId = req.user.id;
+
+  if (parseInt(id) === userId) {
+    return res.status(403).json({ error: "You cannot modify your own permissions!" });
+  }
 
   if (userType !== "ADMIN" && !userPermissions.includes("superadmin")) {
     return res
@@ -288,7 +317,7 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
 
   try {
     const invalidPermissions = newPermissions.filter(
-      (perm) => !permissons.includes(perm)
+      (perm) => !permissions.includes(perm)
     );
     if (invalidPermissions.length > 0) {
       return res.status(400).json({
@@ -322,6 +351,60 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/create", adminAuth, async (req, res) => {
+  const { name, username, password, type, phone } = req.body;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== 'ADMIN' && !userPermissions.includes("superadmin")) {
+    return res.status(403).json({ error: "No permission to create admin!" });
+  }
+
+  try {
+    if (!name || !username || !password || !type || !phone) {
+      return res.status(400).json({ error: "All fields are required: name, username, password, type, and phone" });
+    }
+
+    const validTypes = ['ADMIN', 'PROVIDER'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ error: "Invalid admin type. Must be either 'ADMIN' or 'PROVIDER'" });
+    }
+
+    const existingAdmin = await prisma.admin.findFirst({
+      where: {
+        OR: [
+          { username },
+          { phone }
+        ]
+      }
+    });
+
+    if (existingAdmin) {
+      return res.status(400).json({ error: "Username or phone number already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await prisma.admin.create({
+      data: { 
+        name, 
+        username, 
+        password: hashedPassword, 
+        type,
+        phone,
+        active: true,
+        permissions: []
+      }
+    });
+
+    res.status(201).json({ 
+      message: "Admin created successfully",
+    });
+  } catch (error) {
+    console.error("Error creating admin:", error);
+    res.status(500).json({ error: "Failed to create admin" });
   }
 });
 

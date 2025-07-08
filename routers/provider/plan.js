@@ -1,11 +1,11 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
-const providerAuth = require("../provider/middleware/providerAuth");
+const providerAuth = require("./middleware/providerAuth");
 const router = express.Router();
 
 router.get("/", providerAuth, async (req, res) => {
   const permissions = req.user.permissions;
-  const userType = req.user.userType;
+  const userType = req.user.type;
 
   try {
     if (

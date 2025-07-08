@@ -7,10 +7,11 @@ const router = express.Router();
 router.post("/", adminAuth, async (req, res) => {
   const { image, title, categoryId } = req.body;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("create_plan")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_plan"))) {
       return res.status(400).json({ error: "No permission to create plan" });
     }
 
@@ -26,12 +27,11 @@ router.post("/", adminAuth, async (req, res) => {
 // Read all plans
 router.get("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
-
-  console.log(permissions);
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("read_plan")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_plan"))) {
       return res.status(400).json({ error: "No permission to read plan" });
     }
 
@@ -73,10 +73,11 @@ router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { image, title, categoryId } = req.body;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("update_plan")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("update_plan"))) {
       return res.status(400).json({ error: "No permission to update plan" });
     }
     const plan = await prisma.plan.update({
@@ -93,10 +94,11 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("plan_status")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("plan_status"))) {
       return res.status(400).json({ error: "No permission to update plan" });
     }
 
@@ -114,10 +116,11 @@ router.put("/active/:id", adminAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const permissions = req.user.permissions || [];
+  const userType = req.user.type;
 
   try {
 
-    if (!permissions.includes("superadmin") && !permissions.includes("delete_plan")) {
+    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("delete_plan"))) {
       return res.status(400).json({ error: "No permission to delete plan" });
     }
     const plan = await prisma.plan.update({

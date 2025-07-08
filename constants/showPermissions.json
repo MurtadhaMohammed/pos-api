@@ -9,7 +9,8 @@
       "update_seller",
       "update_seller_status",
       "reset_password_seller",
-      "read_seller_info"
+      "read_seller_info",
+      "read_seller_report"
     ],
     "provider_permissions": [
       "read_provider",
@@ -22,7 +23,9 @@
       "create_provider_cards",
       "update_provider_cards",
       "provider_cards_status",
-      "read_provider_report"
+      "read_provider_report",
+      "provider_read_about",
+      "update_provider_status"
     ],
     "wallet_permissions": [
       "read_seller_wallet",

@@ -1,12 +1,16 @@
 const jwt = require("jsonwebtoken");
-const prisma = require("../../prismaClient");
+const prisma = require("../../../prismaClient");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
 const providerAuth = async (req, res, next) => {
+  
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.sendStatus(401);
+  
+  if (!token) {
+    return res.sendStatus(401);
+  }
 
   jwt.verify(token, JWT_SECRET, async (err, decodedUser) => {
     if (err) {
@@ -29,6 +33,7 @@ const providerAuth = async (req, res, next) => {
         include: { provider: true },
       });
 
+
       if (!user) {
         return res.status(404).json({ error: "Provider not found!" });
       }
@@ -37,7 +42,10 @@ const providerAuth = async (req, res, next) => {
         return res.status(403).json({ error: "Provider account is not active" });
       }
 
-      req.user = decodedUser;
+      req.user = {
+        ...decodedUser,
+        providerId: user.provider.id
+      };
       next();
     } catch (dbError) {
       console.error("Database error:", dbError);

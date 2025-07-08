@@ -24,6 +24,7 @@ const categoryRouter = require("./routers/admin/categories");
 const stockRouter = require("./routers/admin/stock");
 const providerCardsRouter = require("./routers/admin/providerCards");
 const permissionsRouter = require("./routers/admin/permissions");
+const providersRouter = require("./routers/provider/index");
 const POSRouter = require("./routers/POS");
 const { resetHoldExpired } = require("./helper/resetHoldExpired");
 const { resetSellerExpiredHolds } = require("./helper/resetSellerHoldExpired");
@@ -63,10 +64,11 @@ app.use("/api/admin/provider-cards", providerCardsRouter);
 app.use("/api/admin/permissions", permissionsRouter);
 
 
-app.use("/api/provider", providerRouter);
+app.use("/api/provider", providersRouter);
 
 //POS APIs
 app.use("/api/pos", POSRouter);
+app.use("/api/v2/pos", POSRouter);
 
 cron.schedule("*/15 * * * *", async () => {
   await resetHoldExpired();
