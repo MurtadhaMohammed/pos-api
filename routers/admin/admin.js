@@ -79,6 +79,14 @@ router.get("/permissions/all", adminAuth, async (req, res) => {
   }
 });
 
+router.get("/permissions", adminAuth, async (req, res) => {
+  try {
+    res.status(200).json(permissions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Login Admin
 router.post("/login", async (req, res) => {
   const { phone, password } = req.body;
