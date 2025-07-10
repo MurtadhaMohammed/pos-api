@@ -1,5 +1,6 @@
 [
   "superadmin",
+  "superprovider",
   
   "read_seller",
   "create_seller",
