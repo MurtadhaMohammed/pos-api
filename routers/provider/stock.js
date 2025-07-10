@@ -6,18 +6,6 @@ const router = express.Router();
 router.get("/info", providerAuth, async (req, res) => {
     try {
       let { providerId } = req.query;
-      const permissions = req.user.permissions || [];
-      const userType = req.user.type;
-  
-      if (
-        userType !== 'PROVIDER' || 
-        (
-          !permissions.includes("superprovider") &&
-          !permissions.includes("statistics")
-        )
-      ) {
-        return res.status(400).json({ error: "No permission to read statistics" });
-      }
   
       if (
         req?.user?.providerId &&

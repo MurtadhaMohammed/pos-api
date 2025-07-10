@@ -4,23 +4,10 @@ const providerAuth = require("./middleware/providerAuth");
 const router = express.Router();
 const dayjs = require("dayjs");
 
-
 router.get("/", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
   const providerId = req.user.providerId;
 
   try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("read_payment")
-      )
-    ){
-      return res.status(400).json({ error: "No permission to read payments" });
-    }
-    
     const q = req.query.q || undefined;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -30,7 +17,7 @@ router.get("/", providerAuth, async (req, res) => {
     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
 
     const where = {
-      providerId: parseInt(providerId)
+      providerId: parseInt(providerId),
     };
 
     if (startDate && endDate) {
@@ -45,40 +32,44 @@ router.get("/", providerAuth, async (req, res) => {
     const totalPayments = await prisma.payment.count({
       where: {
         ...where,
-        OR: q ? [
-          {
-            seller: {
-              name: {
-                contains: q,
+        OR: q
+          ? [
+              {
+                seller: {
+                  name: {
+                    contains: q,
+                  },
+                },
               },
-            },
-          },
-          {
-            item: {
-              array_contains: [{ code: q }],
-            },
-          },
-        ] : undefined
+              {
+                item: {
+                  array_contains: [{ code: q }],
+                },
+              },
+            ]
+          : undefined,
       },
     });
 
     const payments = await prisma.payment.findMany({
       where: {
         ...where,
-        OR: q ? [
-          {
-            seller: {
-              name: {
-                contains: q,
+        OR: q
+          ? [
+              {
+                seller: {
+                  name: {
+                    contains: q,
+                  },
+                },
               },
-            },
-          },
-          {
-            item: {
-              array_contains: [{ code: q }],
-            },
-          },
-        ] : undefined
+              {
+                item: {
+                  array_contains: [{ code: q }],
+                },
+              },
+            ]
+          : undefined,
       },
       include: {
         seller: true,
@@ -105,21 +96,7 @@ router.get("/", providerAuth, async (req, res) => {
   }
 });
 
-router.get("/info", providerAuth , async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("statistics")
-    )
-  ) {
-    return res.status(400).json({ error: "No permission to get seller info" });
-  }
-
-
+router.get("/info", providerAuth, async (req, res) => {
   try {
     let { filterType, startDate, endDate } = req.query;
     const now = dayjs();
@@ -159,7 +136,7 @@ router.get("/info", providerAuth , async (req, res) => {
       },
       select: {
         id: true,
-        name: true, 
+        name: true,
         address: true,
       },
     });
@@ -178,7 +155,6 @@ router.get("/info", providerAuth , async (req, res) => {
       },
     });
 
-    
     const paymentMap = payments.reduce((acc, payment) => {
       if (!acc[payment.sellerId]) {
         acc[payment.sellerId] = { totalPaid: 0, count: 0 };
@@ -206,20 +182,9 @@ router.get("/info", providerAuth , async (req, res) => {
 });
 
 router.get("/intervals", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
+
 
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("statistics")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to read statistics" });
-    }
 
     let { filterType, providerId, startDate, endDate } = req.query;
 
@@ -347,18 +312,6 @@ router.get("/intervals", providerAuth, async (req, res) => {
 });
 
 router.get("/cards", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("statistics")
-    )
-  ) {
-    return res.status(400).json({ error: "No permission to read statistics" });
-  }
 
   try {
     let { filterType, providerId, startDate, endDate } = req.query;
@@ -448,59 +401,43 @@ router.get("/cards", providerAuth, async (req, res) => {
 router.get("/info/provider/:providerId", providerAuth, async (req, res) => {
   const { providerId } = req.params;
   const { startDate, endDate, filterType } = req.query;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
 
-  try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("statistics")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to read statistics" });
-    }
-  } catch (error) {
-    console.error("Error fetching provider info:", error);
-    res.status(500).json({ success: false, message: "Server error." });
-  }
 
   // Calculate date range based on filterType using dayjs
   let parsedStartDate = null;
   let parsedEndDate = null;
 
   if (filterType) {
-    const dayjs = require('dayjs');
+    const dayjs = require("dayjs");
     const now = dayjs();
-    
+
     switch (filterType.toLowerCase()) {
-      case 'day':
-        parsedStartDate = now.startOf('day').toDate();
-        parsedEndDate = now.endOf('day').toDate();
+      case "day":
+        parsedStartDate = now.startOf("day").toDate();
+        parsedEndDate = now.endOf("day").toDate();
         break;
-      case 'yesterday':
-        parsedStartDate = now.subtract(1, 'day').startOf('day').toDate();
-        parsedEndDate = now.subtract(1, 'day').endOf('day').toDate();
+      case "yesterday":
+        parsedStartDate = now.subtract(1, "day").startOf("day").toDate();
+        parsedEndDate = now.subtract(1, "day").endOf("day").toDate();
         break;
-      case 'week':
-        parsedStartDate = now.startOf('week').toDate();
-        parsedEndDate = now.endOf('week').toDate();
+      case "week":
+        parsedStartDate = now.startOf("week").toDate();
+        parsedEndDate = now.endOf("week").toDate();
         break;
-      case 'month':
-        parsedStartDate = now.startOf('month').toDate();
-        parsedEndDate = now.endOf('month').toDate();
+      case "month":
+        parsedStartDate = now.startOf("month").toDate();
+        parsedEndDate = now.endOf("month").toDate();
         break;
-      case 'year':
-        parsedStartDate = now.startOf('year').toDate();
-        parsedEndDate = now.endOf('year').toDate();
+      case "year":
+        parsedStartDate = now.startOf("year").toDate();
+        parsedEndDate = now.endOf("year").toDate();
         break;
       default:
         if (startDate) parsedStartDate = dayjs(startDate).toDate();
         if (endDate) parsedEndDate = dayjs(endDate).toDate();
     }
   } else {
-    const dayjs = require('dayjs');
+    const dayjs = require("dayjs");
     if (startDate) parsedStartDate = dayjs(startDate).toDate();
     if (endDate) parsedEndDate = dayjs(endDate).toDate();
   }
@@ -531,7 +468,7 @@ router.get("/info/provider/:providerId", providerAuth, async (req, res) => {
   const totalAmountPaid = payments.reduce((sum, payment) => {
     const price = payment?.localCard?.price || 0;
     const qty = payment?.qty || 0;
-    return sum + (price * qty);
+    return sum + price * qty;
   }, 0);
 
   const totalCardsSold = payments.reduce((sum, payment) => {
@@ -544,13 +481,12 @@ router.get("/info/provider/:providerId", providerAuth, async (req, res) => {
     },
   });
 
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     totalAmountPaid: Number(totalAmountPaid) || 0,
     totalCardsSold: Number(totalCardsSold) || 0,
     numberOfSellers,
   });
 });
-
 
 module.exports = router;

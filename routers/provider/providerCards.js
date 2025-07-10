@@ -6,22 +6,9 @@ const { purchase } = require("../../helper/purchase");
 const router = express.Router();
 
 router.get("/:providerId", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || []; 
-  const userType = req.user.type;
   const providerId = parseInt(req.params.providerId, 10);
 
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("read_provider_cards")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to read provider cards" });
-    }
-
     const provider = await prisma.provider.findUnique({
       where: { id: providerId },
     });
@@ -74,19 +61,6 @@ router.get("/:providerId", providerAuth, async (req, res) => {
 });
 
 router.post("/", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("create_provider_cards")
-    )
-  ) {
-    return res.status(400).json({ error: "No permission to update provider cards" });
-  }
-
   try {
     const { price, companyPrice, sellerPrice, providerId, planId } = req.body;
 
@@ -118,21 +92,7 @@ router.post("/", providerAuth, async (req, res) => {
 });
 
 router.put("/:id", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("update_provider_cards")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to update provider cards" });
-    }
-
     const { type, providerId } = req?.user;
     const id = parseInt(req.params.id, 10);
     const { price, companyPrice, sellerPrice } = req.body;
@@ -176,21 +136,7 @@ router.put("/:id", providerAuth, async (req, res) => {
 });
 
 router.put("/active/:id", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("provider_cards_status")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to update provider cards" });
-    }
-
     const id = parseInt(req.params.id, 10);
     const { active } = req.body;
     const customPrice = await prisma.customPrice.update({
@@ -209,20 +155,8 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 
 router.post("/cardHolder", providerAuth, async (req, res) => {
   const { providerCardId, quantity = 1, sellerId } = req.body;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-  try {
 
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("create_payment")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to create payment" });
-    }
-  
+  try {
     let resp = await holdCard(providerCardId, quantity, sellerId);
     if (resp.error) {
       return res.status(500).json(resp);
@@ -240,20 +174,8 @@ router.post("/purchase", providerAuth, async (req, res) => {
   const { hold_id, sellerId } = req.body;
   const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
-  const userType = req.user.type;
-  const permissions = req.user.permissions || [];
+
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("create_payment")
-      )
-    ) {
-      return res.status(400).json({ error: "No permission to create payment" });
-    }
-
     const seller = await prisma.seller.findUnique({
       where: {
         id: sellerId,

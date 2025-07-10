@@ -8,23 +8,9 @@ const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 const router = express.Router();
 
 router.post("/", providerAuth, async (req, res) => {
-  
   const { name, username, password, address, phone } = req.body;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
 
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("create_seller")
-      ) 
-    ){
-      return res.status(400).json({ error: "No permission to create sellers" });
-    }  
-
     const existingSeller = await prisma.seller.findUnique({
       where: {
         username: username,
@@ -47,7 +33,6 @@ router.post("/", providerAuth, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-
     const seller = await prisma.seller.create({
       data: {
         name,
@@ -69,21 +54,8 @@ router.post("/", providerAuth, async (req, res) => {
 router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { name, username, address, phone } = req.body;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
 
   try {
-
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("update_seller")
-      ) 
-    ){
-      return res.status(400).json({ error: "No permission to update sellers" });
-    }
-
     const seller = await prisma.seller.update({
       where: { id: parseInt(id) },
       data: { name, username, address, phone },
@@ -97,18 +69,6 @@ router.put("/:id", providerAuth, async (req, res) => {
 
 router.patch("/report/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("read_seller_report")
-    )
-  ){
-    return res.status(400).json({ error: "No permission to read seller report" });
-  }
 
   const seller = await prisma.seller.findUnique({
     where: {
@@ -153,18 +113,6 @@ router.patch("/report/:id", providerAuth, async (req, res) => {
 router.put("/active/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("update_seller_status")
-    )
-  ){
-    return res.status(400).json({ error: "No permission to update sellers" });
-  }
 
   const seller = await prisma.seller.update({
     where: { id: parseInt(id) },
@@ -174,7 +122,7 @@ router.put("/active/:id", providerAuth, async (req, res) => {
   const socketId = connectedUsers[seller?.id];
   if (!seller?.active && socketId) {
     const io = getSocketInstance();
-    io.to(socketId).emit("logout", "Logout please!..."); 
+    io.to(socketId).emit("logout", "Logout please!...");
   }
 
   res.json(seller);
@@ -183,18 +131,6 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 router.put("/reset-password/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const { newPassword } = req.body;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("reset_password_seller")
-    )
-  ){
-    return res.status(400).json({ error: "No permission to update sellers" });
-  }
 
   try {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -207,7 +143,7 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
     const socketId = connectedUsers[updatedSeller?.id];
     if (socketId) {
       const io = getSocketInstance();
-      io.to(socketId).emit("logout", "Logout please!..."); 
+      io.to(socketId).emit("logout", "Logout please!...");
     }
 
     res.json({
@@ -220,19 +156,6 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
 });
 
 router.get("/info", providerAuth, async (req, res) => {
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
-
-  if (
-    userType !== 'PROVIDER' || 
-    (
-      !permissions.includes("superprovider") &&
-      !permissions.includes("read_seller_info")
-    )
-  ){
-    return res.status(400).json({ error: "No permission to get seller info" });
-  }
-
   try {
     let { filterType, startDate, endDate } = req.query;
     const now = dayjs();
@@ -272,7 +195,7 @@ router.get("/info", providerAuth, async (req, res) => {
       },
       select: {
         id: true,
-        name: true, 
+        name: true,
         address: true,
       },
     });
@@ -323,21 +246,8 @@ router.get("/", providerAuth, async (req, res) => {
   const { type, providerId } = req?.user;
   const isProvider = type === "PROVIDER";
   const searchQuery = req.query.q || "";
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
 
   try {
-    
-      if (
-        userType !== 'PROVIDER' || 
-        (
-          !permissions.includes("superprovider") &&
-          !permissions.includes("read_seller")
-        )
-      ) {
-        return res.status(400).json({ error: "No permission to read sellers" });
-      }
-
     const where = {
       AND: [
         isProvider && !req.query.providerId
@@ -392,18 +302,14 @@ router.get("/", providerAuth, async (req, res) => {
 });
 
 router.get("/:id", providerAuth, async (req, res) => {
-  const { providerId, permissions } = req.user;
+  const { providerId } = req.user;
   const sellerId = Number(req.params.id);
 
   try {
-    if (!permissions.includes("read_seller")) {
-      return res.status(403).json({ error: "No permission to read sellers" });
-    }
-
     const seller = await prisma.seller.findFirst({
       where: {
         id: sellerId,
-        providerId: Number(providerId)
+        providerId: Number(providerId),
       },
       select: {
         id: true,
@@ -415,12 +321,14 @@ router.get("/:id", providerAuth, async (req, res) => {
         paymentAmount: true,
         isHajji: true,
         active: true,
-        createtAt: true
-      }
+        createtAt: true,
+      },
     });
 
     if (!seller) {
-      return res.status(404).json({ error: "Seller not found or you don't have access to it" });
+      return res
+        .status(404)
+        .json({ error: "Seller not found or you don't have access to it" });
     }
 
     res.json(seller);
@@ -428,6 +336,5 @@ router.get("/:id", providerAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 module.exports = router;

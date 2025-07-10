@@ -6,20 +6,9 @@ const router = express.Router();
 
 router.post("/", providerAuth, async (req, res) => {
   const { amount, sellerId, date, note } = req.body;
-  const { providerId, permissions } = req.user;
-  const userType = req.user.type
+  const { providerId } = req.user;
 
   try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("create_seller_wallet")
-      ) 
-    ){
-      return res.status(403).json({ error: "No permission to create seller wallet" });
-    }
-
     const sellerIdInt = parseInt(sellerId);
     const seller = await prisma.seller.findUnique({
       where: {
@@ -41,7 +30,9 @@ router.post("/", providerAuth, async (req, res) => {
     }
 
     if (parseInt(providerId) !== seller?.providerId) {
-      return res.status(403).json({ error: "You can only manage your own sellers" });
+      return res
+        .status(403)
+        .json({ error: "You can only manage your own sellers" });
     }
 
     let HoldId = generateCustomHoldId();
@@ -115,7 +106,6 @@ router.post("/resetHold", providerAuth, async (req, res) => {
   }
 
   try {
-
     const seller = await prisma.seller.findUnique({
       where: {
         id: parseInt(sellerId),
@@ -130,7 +120,9 @@ router.post("/resetHold", providerAuth, async (req, res) => {
     }
 
     if (parseInt(providerId) !== seller?.providerId) {
-      return res.status(403).json({ error: "You can only manage your own sellers" });
+      return res
+        .status(403)
+        .json({ error: "You can only manage your own sellers" });
     }
 
     const updatedSeller = await prisma.seller.updateMany({
@@ -157,19 +149,8 @@ router.post("/resetHold", providerAuth, async (req, res) => {
 
 router.get("/", providerAuth, async (req, res) => {
   const providerId = req.user.providerId;
-  const permissions = req.user.permissions;
-  const userType = req.user.type;
 
   try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("read_seller_wallet")      ) 
-    ){
-      return res.status(403).json({ error: "No permission to read seller wallet" });
-    }
-
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const sellerId = parseInt(req.query.sellerId) || undefined;
@@ -184,7 +165,7 @@ router.get("/", providerAuth, async (req, res) => {
       seller = await prisma.seller.findUnique({
         where: {
           id: sellerId,
-          providerId: parseInt(providerId)
+          providerId: parseInt(providerId),
         },
       });
     }
@@ -215,31 +196,22 @@ router.get("/", providerAuth, async (req, res) => {
 router.get("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
   const providerId = req.user.providerId;
-  const permissions = req.user.permissions;
-  const userType = req.user.type;
 
   try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("read_seller_wallet")      ) 
-    ){
-      return res.status(403).json({ error: "No permission to read seller wallet" });
-    }
-
     const wallet = await prisma.wallet.findFirst({
-      where: { 
+      where: {
         id: Number(id),
-        providerId: parseInt(providerId)
+        providerId: parseInt(providerId),
       },
       include: {
-        seller: true
-      }
+        seller: true,
+      },
     });
 
     if (!wallet) {
-      return res.status(404).json({ error: "Wallet transaction not found or you don't have access to it" });
+      return res.status(404).json({
+        error: "Wallet transaction not found or you don't have access to it",
+      });
     }
 
     res.json(wallet);
@@ -250,23 +222,13 @@ router.get("/:id", providerAuth, async (req, res) => {
 
 router.delete("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
-  const { providerId, permissions } = req.user;
-  const userType = req.user.type;
+  const { providerId } = req.user;
 
   try {
-    if (
-      userType !== 'PROVIDER' || 
-      (
-        !permissions.includes("superprovider") &&
-        !permissions.includes("delete_seller_wallet")) 
-    ){
-      return res.status(403).json({ error: "No permission to delete seller wallet" });
-    }
-
     const wallet = await prisma.wallet.findFirst({
-      where: { 
+      where: {
         id: Number(id),
-        providerId: parseInt(providerId)
+        providerId: parseInt(providerId),
       },
       include: {
         seller: true,
@@ -274,15 +236,21 @@ router.delete("/:id", providerAuth, async (req, res) => {
     });
 
     if (!wallet) {
-      return res.status(404).json({ error: "Wallet transaction not found or you don't have access to it" });
+      return res.status(404).json({
+        error: "Wallet transaction not found or you don't have access to it",
+      });
     }
 
     if (wallet.seller?.walletAmount < wallet.amount) {
-      return res.status(400).json({ error: "Seller has already spent the wallet amount" });
+      return res
+        .status(400)
+        .json({ error: "Seller has already spent the wallet amount" });
     }
 
     if (wallet.type === "REFUND") {
-      return res.status(400).json({ error: "Cannot delete refund transactions" });
+      return res
+        .status(400)
+        .json({ error: "Cannot delete refund transactions" });
     }
 
     await prisma.$transaction(async (prisma) => {
@@ -308,11 +276,11 @@ router.delete("/:id", providerAuth, async (req, res) => {
         },
       });
 
-      await prisma.wallet.delete({ 
-        where: { 
+      await prisma.wallet.delete({
+        where: {
           id: Number(id),
-          providerId: parseInt(providerId)
-        } 
+          providerId: parseInt(providerId),
+        },
       });
     });
 

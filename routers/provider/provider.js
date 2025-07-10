@@ -5,12 +5,7 @@ const router = express.Router();
 
 router.get("/about/:id", providerAuth, async (req, res) => {
   const providerId = req.params.id;
-  const permissions = req.user.permissions || [];
-  const userType = req.user.type;
 
-  if (userType !== 'PROVIDER' || (!permissions.includes("superprovider") && !permissions.includes("provider_read_about"))) {
-    return res.status(400).json({ error: "No permission to read provider about" });
-  }
   try {
     const provider = await prisma.provider.findUnique({
       where: { id: parseInt(providerId) },
@@ -23,8 +18,6 @@ router.get("/about/:id", providerAuth, async (req, res) => {
 
 router.get("/summary/:id", providerAuth, async (req, res) => {
     const providerId = req.params.id;
-    const permissions = req.user.permissions || [];
-    const userType = req.user.type;
   
     if (!providerId) {
       return res.status(400).json({ error: "Provider ID is required" });
@@ -32,15 +25,7 @@ router.get("/summary/:id", providerAuth, async (req, res) => {
   
     try {
   
-      if (
-        userType !== 'PROVIDER' || 
-        (
-          !permissions.includes("superprovider") &&
-          !permissions.includes("provider_read_about")
-        )
-      ) {
-        return res.status(400).json({ error: "No permission to read provider" });
-      }
+  
       const cards = await prisma.card.findMany({
         where: {
           providerId: Number(providerId),
