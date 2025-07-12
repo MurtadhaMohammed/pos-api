@@ -78,16 +78,23 @@ router.post("/login", async (req, res) => {
 
 router.post("/v3/login", async (req, res) => {
   try {
-    const { phone, device } = req.body;
+    const { phone, password, device } = req.body;
 
     const seller = await prisma.seller.findFirst({
       where: { phone, active: true },
     });
 
+    const valid = await bcrypt.compare(password, seller.password);
+
+    
     if (!seller) {
       return res.status(404).json({ error: "User not found" });
     }
-
+    
+    if (!valid) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+    
     if (seller.device && device !== seller.device) {
       return res.status(404).json({ error: "Device is already logied.!" });
     }
@@ -1031,7 +1038,9 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
         ${codes
           ?.map((code, i) => {
             const currentY = codeStartY + i * codeLineHeight + 10; // Calculate Y position dynamically
-            return `<text x="50%" y="${currentY}" class="${i === 0 ? "code" : ""}" text-anchor="middle">${code}</text>`;
+            return `<text x="50%" y="${currentY}" class="${
+              i === 0 ? "code" : ""
+            }" text-anchor="middle">${code}</text>`;
           })
           .join("")}
     
