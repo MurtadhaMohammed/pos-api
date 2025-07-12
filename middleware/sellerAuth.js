@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const prisma = require("../prismaClient");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
