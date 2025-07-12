@@ -84,12 +84,13 @@ router.post("/v3/login", async (req, res) => {
       where: { phone, active: true },
     });
 
-    const valid = await bcrypt.compare(password, seller.password);
-
+    
     
     if (!seller) {
       return res.status(404).json({ error: "User not found" });
     }
+    
+    const valid = await bcrypt.compare(password, seller.password);
     
     if (!valid) {
       return res.status(401).json({ error: "Invalid password" });
