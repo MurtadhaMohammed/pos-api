@@ -13,7 +13,7 @@ const sellerAuth = (req, res, next) => {
     if (err) return res.sendStatus(403);
 
     const jti = decoded?.jti;
-    const isBlacklisted = await prisma.tokenBlocklist.findUnique({
+    const isBlacklisted = await prisma.blocklist.findUnique({
       where: { jti },
     });
 
