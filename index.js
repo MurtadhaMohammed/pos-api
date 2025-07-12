@@ -29,6 +29,7 @@ const POSRouter = require("./routers/POS");
 const { resetHoldExpired } = require("./helper/resetHoldExpired");
 const { resetSellerExpiredHolds } = require("./helper/resetSellerHoldExpired");
 const { initializeSocket } = require("./helper/socket");
+const { resetBlacklist } = require("./helper/resetExpiredTokens");
 require("dotenv").config();
 
 app.use(cors());
@@ -63,7 +64,6 @@ app.use("/api/admin/stock", stockRouter);
 app.use("/api/admin/provider-cards", providerCardsRouter);
 app.use("/api/admin/permissions", permissionsRouter);
 
-
 app.use("/api/provider", providersRouter);
 
 //POS APIs
@@ -73,6 +73,7 @@ app.use("/api/v2/pos", POSRouter);
 cron.schedule("*/15 * * * *", async () => {
   await resetHoldExpired();
   await resetSellerExpiredHolds();
+  await resetBlacklist();
 });
 
 server.listen(port, () => {
