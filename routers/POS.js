@@ -14,6 +14,7 @@ const { holdCard } = require("../helper/holdCard");
 const { purchase } = require("../helper/purchase");
 const getDateDifferenceType = require("../helper/getDateDifferenceType");
 const { otpLimiter } = require("../middleware/rateLimit");
+const { v4: uuidv4 } = require("uuid");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -84,18 +85,16 @@ router.post("/v3/login", async (req, res) => {
       where: { phone, active: true },
     });
 
-    
-    
     if (!seller) {
       return res.status(404).json({ error: "User not found" });
     }
-    
+
     const valid = await bcrypt.compare(password, seller.password);
-    
+
     if (!valid) {
       return res.status(401).json({ error: "Invalid password" });
     }
-    
+
     if (seller.device && device !== seller.device) {
       return res.status(404).json({ error: "Device is already logied.!" });
     }
@@ -190,7 +189,8 @@ router.post("/verify", async (req, res) => {
       });
     }
 
-    const token = jwt.sign(seller, JWT_SECRET);
+    const jti = uuidv4();
+    const token = jwt.sign({ ...seller, jti }, JWT_SECRET);
     res.json({ token, ...seller, password: "You can't see it 😉" });
   } catch (err) {
     console.error("OTP verify error:", err);
@@ -248,6 +248,17 @@ router.post("/logout", sellerAuth, async (req, res) => {
     if (seller.device && device !== seller.device) {
       return res.status(404).json({ error: "You cant do this." });
     }
+
+    const { jti, iat } = req?.user;
+
+    if (!jti || !iat) throw new Error("Invalid token");
+
+    await prisma.blocklist.create({
+      data: {
+        jti,
+        expiresAt: new Date(iat * 1000),
+      },
+    });
 
     await prisma.seller.update({
       where: {

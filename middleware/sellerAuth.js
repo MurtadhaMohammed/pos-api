@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const prisma = require("../prismaClient");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -8,9 +9,16 @@ const sellerAuth = (req, res, next) => {
     ? authHeader.split(" ")[1]
     : authHeader;
   if (token == null) return res.sendStatus(401);
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) return res.sendStatus(403);
-    req.user = user;
+
+    const jti = decoded?.jti;
+    const isBlacklisted = await prisma.blocklist.findUnique({
+      where: { jti },
+    });
+
+    if (isBlacklisted) return res.status(401).json({ error: "Token revoked" });
+    req.user = decoded;
     next();
   });
 };

@@ -211,6 +211,13 @@ model Archive {
   stock          Stock[]
 }
 
+model Blocklist {
+  id        Int      @id @default(autoincrement())
+  jti       String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 enum CodeStatus {
   Ready
   Error
