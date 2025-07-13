@@ -13,11 +13,14 @@ const sellerAuth = (req, res, next) => {
     if (err) return res.sendStatus(403);
 
     const jti = decoded?.jti;
-    const isBlacklisted = await prisma.blocklist.findUnique({
-      where: { jti },
-    });
+    if (jti) {
+      const isBlacklisted = await prisma.blocklist.findUnique({
+        where: { jti },
+      });
 
-    if (isBlacklisted) return res.status(401).json({ error: "Token revoked" });
+      if (isBlacklisted)
+        return res.status(401).json({ error: "Token revoked" });
+    }
     req.user = decoded;
     next();
   });
