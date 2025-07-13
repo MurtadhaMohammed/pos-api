@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
+  const { image, title, priority } = req.body;
 
   try {
 

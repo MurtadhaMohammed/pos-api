@@ -489,4 +489,96 @@ router.get("/info/provider/:providerId", providerAuth, async (req, res) => {
   });
 });
 
+router.get("/info/seller/:sellerId", providerAuth, async (req, res) => {
+  const { sellerId } = req.params;
+  const { startDate, endDate } = req.query;
+  const providerId = req.user.providerId;
+
+  try {
+    const seller = await prisma.seller.findFirst({
+      where: {
+        id: parseInt(sellerId),
+        providerId: parseInt(providerId),
+      },
+    });
+
+    if (!seller) {
+      return res.status(404).json({ error: "Seller not found or not authorized" });
+    }
+
+    const parsedStartDate = startDate ? dayjs(startDate).startOf("day") : null;
+    const parsedEndDate = endDate ? dayjs(endDate).endOf("day") : null;
+
+    const whereCondition = {
+      sellerId: parseInt(sellerId),
+    };
+
+    if (parsedStartDate && parsedEndDate) {
+      whereCondition.createtAt = {
+        gte: parsedStartDate,
+        lte: parsedEndDate,
+      };
+    } else if (parsedStartDate) {
+      whereCondition.createtAt = {
+        gte: parsedStartDate,
+      };
+    } else if (parsedEndDate) {
+      whereCondition.createtAt = {
+        lte: parsedEndDate,
+      };
+    }
+
+    const payments = await prisma.payment.findMany({
+      where: whereCondition,
+    });
+
+    let numberOfCards = payments
+      .map((el) => el?.qty || 0)
+      .reduce((a, b) => a + b, 0);
+
+    let cards = payments.map((el) => {
+      const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
+      const details = item?.details || {};
+
+      return {
+        id: el?.localCard?.id,
+        title: details?.title || "Unknown Title",
+        qty: el?.qty || 0,
+        totalDebts: (el?.companyPrice || 0) * (el?.qty || 0),
+        sellerPayments: (el?.price || 0) * (el?.qty || 0),
+        sellerProfit:
+          ((el?.price || 0) - (el?.companyPrice || 0)) * (el?.qty || 0),
+        createtAt: el?.createtAt,
+      };
+    });
+
+    const groupedCards = Object.values(
+      cards
+        .sort((a, b) => b.createtAt - a.createtAt)
+        .reduce((acc, card) => {
+          if (!acc[card.id]) {
+            acc[card.id] = {
+              id: card?.id,
+              title: card.title,
+              qty: 0,
+              totalDebts: 0,
+              sellerPayments: 0,
+              sellerProfit: 0,
+            };
+          }
+          acc[card.id].qty += card.qty;
+          acc[card.id].totalDebts += card.totalDebts;
+          acc[card.id].sellerPayments += card.sellerPayments;
+          acc[card.id].sellerProfit += card.sellerProfit;
+          return acc;
+        }, {})
+    );
+
+    res.json({ success: true, numberOfCards, cards: groupedCards });
+  } catch (error) {
+    console.error("Error fetching seller info:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
 module.exports = router;
