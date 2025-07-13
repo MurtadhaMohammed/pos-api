@@ -220,4 +220,207 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   }
 });
 
+router.get("/download/:id", adminAuth, async (req, res) => {
+  const { permissions = [], type: userType } = req.user;
+
+  try {
+    if (userType !== 'ADMIN' || !permissions.includes("superadmin") && !permissions.includes("read_archive")) {
+      return res.status(400).json({ error: "No permission to download archive" });
+    }
+
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid ID!" });
+    }
+
+    const archive = await prisma.archive.findUnique({
+      where: { id },
+      include: {
+        stock: {
+          select: {
+            id: true, serial: true, code: true, status: true,
+            createdAt: true, sold_at: true, sellerId: true,
+            seller: { select: { id: true, name: true, username: true } }
+          }
+        },
+        provider: { select: { id: true, name: true } },
+        plan: { select: { id: true, title: true } }
+      }
+    });
+
+    if (!archive) {
+      return res.status(404).json({ error: "This archive is not available!" });
+    }
+
+    if (!archive.stock?.length) {
+      return res.status(400).json({ error: "There is no stock for this archive!" });
+    }
+
+    const archiveCreatedAt = dayjs(archive.createtAt);
+    const invalidStock = archive.stock.filter(
+      (item) =>
+        Math.abs(archiveCreatedAt.diff(dayjs(item.createdAt), "minute")) > 1
+    );
+
+
+    if (invalidStock.length > 0) {
+      return res.status(400).json({ 
+        error: `Some items in the stock have a different creation date than the archive creation date. Please check the data.` 
+      });
+    }
+
+    const workbook = XLSX.utils.book_new();
+    
+    const worksheet = {};
+    
+    const headerStyle = {
+      font: { bold: true },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "medium" },
+        bottom: { style: "medium" },
+        left: { style: "medium" },
+        right: { style: "medium" }
+      }
+    };
+
+    const dataStyle = {
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }
+      }
+    };
+
+    const stockHeaders = ['ID', 'Serial', 'Code', 'Status', 'Created At', 'Sold At', 'Seller ID', 'Seller Name', 'Seller Username'];
+    
+    stockHeaders.forEach((header, index) => {
+      const col = String.fromCharCode(65 + index);
+      worksheet[`${col}1`] = { v: header, s: headerStyle };
+    });
+
+    const stockData = archive.stock.map(item => ({
+      'ID': item.id,
+      'Serial': item.serial,
+      'Code': item.code,
+      'Status': item.status,
+      'Created At': dayjs(item.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+      'Sold At': item.sold_at ? dayjs(item.sold_at).format('YYYY-MM-DD HH:mm:ss') : '',
+      'Seller ID': item.sellerId || '',
+      'Seller Name': item.seller?.name || '',
+      'Seller Username': item.seller?.username || ''
+    }));
+
+    stockData.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const values = Object.values(item);
+      
+      values.forEach((value, colIndex) => {
+        const col = String.fromCharCode(65 + colIndex);
+        worksheet[`${col}${rowIndex}`] = { 
+          v: value, 
+          s: dataStyle
+        };
+      });
+    });
+
+    const archiveInfo = [
+      ['Archive ID', archive.id],
+      ['Group Title', archive.group_title],
+      ['Quantity', archive.qty],
+      ['Reception Date', archive.reciption_date ? dayjs(archive.reciption_date).format('YYYY-MM-DD') : ''],
+      ['Note', archive.note || ''],
+      ['Active', archive.active ? 'Yes' : 'No'],
+      ['Created At', dayjs(archive.createtAt).format('YYYY-MM-DD HH:mm:ss')],
+      ['Provider ID', archive.provider?.id || ''],
+      ['Provider Name', archive.provider?.name || ''],
+      ['Plan ID', archive.plan?.id || ''],
+      ['Plan Title', archive.plan?.title || '']
+    ];
+
+    const startRow = stockData.length + 3;
+    
+    worksheet[`A${startRow}`] = { 
+      v: 'Archive Information', 
+      s: {
+        font: { bold: true, size: 14 },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "medium" },
+          bottom: { style: "medium" },
+          left: { style: "medium" },
+          right: { style: "medium" }
+        }
+      }
+    };
+    
+    worksheet['!merges'] = [{ s: { c: 0, r: startRow - 1 }, e: { c: 1, r: startRow - 1 } }];
+
+    const infoLabelStyle = {
+      font: { bold: true },
+      alignment: { horizontal: "left", vertical: "center" },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }
+      }
+    };
+
+    const infoValueStyle = {
+      alignment: { horizontal: "left", vertical: "center" },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }
+      }
+    };
+
+    archiveInfo.forEach(([field, value], index) => {
+      const row = startRow + 1 + index;
+      worksheet[`A${row}`] = { v: field, s: infoLabelStyle };
+      worksheet[`B${row}`] = { v: value, s: infoValueStyle };
+    });
+
+    worksheet['!cols'] = [
+      { wch: 12 }, // ID
+      { wch: 20 }, // Serial
+      { wch: 15 }, // Code
+      { wch: 12 }, // Status
+      { wch: 20 }, // Created At
+      { wch: 20 }, // Sold At
+      { wch: 12 }, // Seller ID
+      { wch: 20 }, // Seller Name
+      { wch: 20 }  // Seller Username
+    ];
+    
+    worksheet['!rows'] = [
+      { hpt: 25 }, // Header row
+      ...Array(stockData.length).fill({ hpt: 20 }), // Data rows
+      { hpt: 15 }, // Empty row
+      { hpt: 25 }, // Archive info title
+      ...Array(archiveInfo.length).fill({ hpt: 20 }) // Archive info rows
+    ];
+    
+    const totalRows = startRow + archiveInfo.length;
+    worksheet['!ref'] = `A1:I${totalRows}`;
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Archive Data');
+
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const filename = `archive_${archive.id}_${dayjs().format('YYYY-MM-DD')}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message || "Error in server!" });
+  }
+});
 module.exports = router;
