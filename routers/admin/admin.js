@@ -110,6 +110,7 @@ router.post("/login", async (req, res) => {
         username: admin.username,
         type: admin.type,
         providerId: admin?.provider?.id,
+        roles: admin?.provider?.roles,
       };
 
       const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
@@ -373,21 +374,17 @@ router.post("/create", adminAuth, async (req, res) => {
 
   try {
     if (!name || !username || !password || !type || !phone) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "All fields are required: name, username, password, type, and phone",
-        });
+      return res.status(400).json({
+        error:
+          "All fields are required: name, username, password, type, and phone",
+      });
     }
 
     const validTypes = ["ADMIN", "PROVIDER"];
     if (!validTypes.includes(type)) {
-      return res
-        .status(400)
-        .json({
-          error: "Invalid admin type. Must be either 'ADMIN' or 'PROVIDER'",
-        });
+      return res.status(400).json({
+        error: "Invalid admin type. Must be either 'ADMIN' or 'PROVIDER'",
+      });
     }
 
     const existingAdmin = await prisma.admin.findFirst({

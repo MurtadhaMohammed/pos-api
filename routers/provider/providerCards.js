@@ -155,9 +155,15 @@ router.put("/active/:id", providerAuth, async (req, res) => {
 
 router.post("/cardHolder", providerAuth, async (req, res) => {
   const { providerCardId, quantity = 1, sellerId } = req.body;
+  const { roles } = req.user;
 
   try {
-    let resp = await holdCard(providerCardId, quantity, sellerId);
+    let resp = await holdCard(
+      providerCardId,
+      quantity,
+      sellerId,
+      !!roles?.bulk
+    );
     if (resp.error) {
       return res.status(500).json(resp);
     }
