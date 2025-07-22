@@ -223,7 +223,7 @@ router.post("/cardHolder", adminAuth, async (req, res) => {
       return res.status(400).json({ error: "No permission to create payment" });
     }
   
-    let resp = await holdCard(providerCardId, quantity, sellerId);
+    let resp = await holdCard(providerCardId, quantity, sellerId , true);
     if (resp.error) {
       return res.status(500).json(resp);
     }
