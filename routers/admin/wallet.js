@@ -31,7 +31,6 @@ router.post("/", adminAuth, async (req, res) => {
           select: {
             id: true,
             name: true,
-            username: true,
             phone: true,
             createtAt: true,
           }
