@@ -220,13 +220,6 @@ router.get("/", adminAuth, async (req, res) => {
     const total = await prisma.wallet.count({ where });
     const wallets = await prisma.wallet.findMany({
       where,
-      include: {
-        seller: {
-          include: {
-            provider: true,
-          },
-        },
-      },
       take,
       skip,
       orderBy: {
