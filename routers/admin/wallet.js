@@ -215,6 +215,20 @@ router.get("/", adminAuth, async (req, res) => {
         where: {
           id: sellerId,
         },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          phone: true,
+          active: true,
+          createtAt: true,
+          provider: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+        },
       });
     }
     const total = await prisma.wallet.count({ where });
