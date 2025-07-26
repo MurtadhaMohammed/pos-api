@@ -578,6 +578,7 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
     const sellerWallet = await prisma.wallet.findMany({
       where: {
         providerId,
+        type: "PAYMENT"
       },
       select: {
         id: true,
