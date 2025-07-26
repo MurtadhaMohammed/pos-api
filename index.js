@@ -1,5 +1,5 @@
 const express = require("express");
-// var cors = require("cors");
+var cors = require("cors");
 var cron = require("node-cron");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -32,7 +32,7 @@ const { initializeSocket } = require("./helper/socket");
 const { resetBlacklist } = require("./helper/resetExpiredTokens");
 require("dotenv").config();
 
-// app.use(cors());
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
