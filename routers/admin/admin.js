@@ -52,6 +52,30 @@ router.post("/reset", adminAuth, async (req, res) => {
   }
 });
 
+router.put("/reset/:id", adminAuth, async (req, res) => {
+  const { password } = req.body;
+  const { id } = req.params;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== "ADMIN" || !userPermissions.includes("superadmin")) {
+    return res
+      .status(403)
+      .json({ error: "No permission to reset admin password!" });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await prisma.admin.update({
+      where: { id: parseInt(id) },
+      data: { password: hashedPassword },
+    });
+    res.json({message: "تم التعديل بنجاح"});
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/permissions", adminAuth, async (req, res) => {
   const id = req.user.id;
   try {
@@ -357,6 +381,39 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
     res.status(200).json({
       data: updatedAdmin,
       message: "Admin permissions updated successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/update/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+  const userId = req.user.id;
+
+  if (parseInt(id) === userId) {
+    return res
+      .status(403)
+      .json({ error: "You cannot modify your own permissions!" });
+  }
+
+  if (userType !== "ADMIN" || !userPermissions.includes("superadmin")) {
+    return res
+      .status(403)
+      .json({ error: "No permission to update admin permissions!" });
+  }
+
+  try {
+    const updatedAdmin = await prisma.admin.update({
+      where: { id: parseInt(id) },
+      data: req.body,
+    });
+
+    res.status(200).json({
+      data: updatedAdmin,
+      message: "Admin updated successfully",
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
