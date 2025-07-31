@@ -53,12 +53,12 @@ router.post("/", providerAuth, async (req, res) => {
 
 router.put("/:id", providerAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, username, address, phone } = req.body;
+  const { name, username, address } = req.body;
 
   try {
     const seller = await prisma.seller.update({
       where: { id: parseInt(id) },
-      data: { name, username, address, phone },
+      data: { name, username, address },
     });
 
     res.json(seller);
