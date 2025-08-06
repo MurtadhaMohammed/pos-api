@@ -1,5 +1,5 @@
 const express = require("express");
-var cors = require("cors");
+// var cors = require("cors");
 var cron = require("node-cron");
 const http = require("http");
 const { Server } = require("socket.io");
