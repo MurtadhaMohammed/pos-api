@@ -17,16 +17,13 @@ router.post("/", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("create_seller")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_seller"))
     ) {
       return res.status(400).json({ error: "No permission to create sellers" });
-    }  
+    }
 
     const existingSeller = await prisma.seller.findUnique({
       where: {
@@ -81,16 +78,13 @@ router.get("/", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-    
-      if (
-        userType !== 'ADMIN' || 
-        (
-          !permissions.includes("superadmin") &&
-          !permissions.includes("read_seller")
-        )
-      ) {
-        return res.status(400).json({ error: "No permission to read sellers" });
-      }
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_seller"))
+    ) {
+      return res.status(400).json({ error: "No permission to read sellers" });
+    }
 
     const where = {
       AND: [
@@ -137,11 +131,12 @@ router.get("/", adminAuth, async (req, res) => {
         createtAt: true,
         address: true,
         walletAmount: true,
+        device: true,
         provider: {
           select: {
             id: true,
             name: true,
-          }
+          },
         },
       },
       take,
@@ -165,13 +160,10 @@ router.put("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("update_seller")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_seller"))
     ) {
       return res.status(400).json({ error: "No permission to update sellers" });
     }
@@ -187,6 +179,32 @@ router.put("/:id", adminAuth, async (req, res) => {
   }
 });
 
+// Update seller
+router.put("/reset-device/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const permissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  try {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_seller"))
+    ) {
+      return res.status(400).json({ error: "No permission to update sellers" });
+    }
+
+    const seller = await prisma.seller.update({
+      where: { id: parseInt(id) },
+      data: { device: null },
+    });
+
+    res.json(seller);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // get seller report
 router.patch("/report/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
@@ -194,13 +212,13 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
-    (
-      !permissions.includes("superadmin") &&
-      !permissions.includes("read_seller_report")
-    )
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") &&
+      !permissions.includes("read_seller_report"))
   ) {
-    return res.status(400).json({ error: "No permission to read seller info report" });
+    return res
+      .status(400)
+      .json({ error: "No permission to read seller info report" });
   }
 
   const seller = await prisma.seller.findUnique({
@@ -237,7 +255,7 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
       plan: item?.details?.title,
       price: el?.price,
       cost: el?.companyPrice,
-      qty: el?.qty
+      qty: el?.qty,
     };
   });
 
@@ -251,11 +269,9 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
-    (
-      !permissions.includes("superadmin") &&
-      !permissions.includes("update_seller_status")
-    )
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") &&
+      !permissions.includes("update_seller_status"))
   ) {
     return res.status(400).json({ error: "No permission to update sellers" });
   }
@@ -281,11 +297,9 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
-    (
-      !permissions.includes("superadmin") &&
-      !permissions.includes("reset_password_seller")
-    )
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") &&
+      !permissions.includes("reset_password_seller"))
   ) {
     return res.status(400).json({ error: "No permission to update sellers" });
   }
@@ -318,15 +332,11 @@ router.get("/info", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
-    (
-      !permissions.includes("superadmin") &&
-      !permissions.includes("statistics")
-    )
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") && !permissions.includes("statistics"))
   ) {
     return res.status(400).json({ error: "No permission to get seller info" });
   }
-
 
   try {
     let { filterType, startDate, endDate } = req.query;
