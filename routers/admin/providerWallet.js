@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
 const providerAuth = require("../../middleware/providerAuth");
+const { auditLog } = require("../../helper/audit");
 const router = express.Router();
 
 //create wallet
@@ -11,15 +12,14 @@ router.post("/", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("create_provider_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_provider_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to create provider wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to create provider wallet" });
     }
 
     const provider = await prisma.provider.findUnique({
@@ -52,24 +52,24 @@ router.post("/", adminAuth, async (req, res) => {
     res.status(201).json(providerWallet);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_PROVIDER_WALLET");
   }
 });
 
 router.get("/", providerAuth, async (req, res) => {
-
   const userType = req.user.type;
   const permissions = req.user.permissions || [];
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to read provider wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read provider wallet" });
     }
 
     const take = parseInt(req.query.take || 10);
@@ -122,17 +122,15 @@ router.get("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
   const permissions = req.user.permissions || [];
 
-  
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to read provider wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read provider wallet" });
     }
 
     const wallet = await prisma.providerWallet.findUnique({
@@ -157,15 +155,14 @@ router.put("/:id", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("update_provider_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_provider_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider wallet" });
     }
 
     const oldWallet = await prisma.providerWallet.findUnique({
@@ -196,6 +193,8 @@ router.put("/:id", adminAuth, async (req, res) => {
     res.json(updatedWallet);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_PROVIDER_WALLET");
   }
 });
 
@@ -205,15 +204,14 @@ router.delete("/:id", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("delete_provider_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("delete_provider_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to delete provider wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to delete provider wallet" });
     }
 
     const wallet = await prisma.providerWallet.findUnique({
@@ -240,6 +238,8 @@ router.delete("/:id", adminAuth, async (req, res) => {
     res.json({ message: "Wallet deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DELETE_PROVIDER_WALLET");
   }
 });
 

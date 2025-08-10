@@ -1,7 +1,7 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
-const providerAuth = require("../../middleware/providerAuth");
+const { auditLog } = require("../../helper/audit");
 const router = express.Router();
 
 // Create category
@@ -11,9 +11,14 @@ router.post("/", adminAuth, async (req, res) => {
   const { image, title, priority } = req.body;
 
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_category"))) {
-      return res.status(400).json({ error: "No permission to create category" });
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_category"))
+    ) {
+      return res
+        .status(400)
+        .json({ error: "No permission to create category" });
     }
 
     const category = await prisma.category.create({
@@ -22,6 +27,8 @@ router.post("/", adminAuth, async (req, res) => {
     res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_CATEGORY");
   }
 });
 
@@ -31,11 +38,14 @@ router.get("/", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_category"))) {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_category"))
+    ) {
       return res.status(400).json({ error: "No permission to read category" });
     }
-  
+
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const q = req.query.q || "";
@@ -81,10 +91,15 @@ router.put("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("update_category"))) {
-    return res.status(400).json({ error: "No permission to update category" });
-  }
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_category"))
+    ) {
+      return res
+        .status(400)
+        .json({ error: "No permission to update category" });
+    }
     const category = await prisma.category.update({
       where: { id: Number(id) },
       data: { image, title, priority },
@@ -92,6 +107,8 @@ router.put("/:id", adminAuth, async (req, res) => {
     res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_CATEGORY");
   }
 });
 
@@ -102,7 +119,11 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("category_status"))) {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("category_status"))
+    ) {
       return res
         .status(400)
         .json({ error: "No permission to update category status" });
@@ -115,6 +136,8 @@ router.put("/active/:id", adminAuth, async (req, res) => {
     res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_CATEGORY_STATUS");
   }
 });
 
@@ -124,9 +147,14 @@ router.delete("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("delete_category"))) {
-      return res.status(400).json({ error: "No permission to delete category" });
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("delete_category"))
+    ) {
+      return res
+        .status(400)
+        .json({ error: "No permission to delete category" });
     }
 
     const category = await prisma.category.findUnique({
@@ -145,6 +173,8 @@ router.delete("/:id", adminAuth, async (req, res) => {
     res.json(category);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DELETE_CATEGORY");
   }
 });
 

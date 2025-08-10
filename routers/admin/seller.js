@@ -6,6 +6,7 @@ const dayjs = require("dayjs");
 const { getSocketInstance, connectedUsers } = require("../../helper/socket");
 const getDateDifferenceType = require("../../helper/getDateDifferenceType");
 const adminAuth = require("../../middleware/adminAuth");
+const { auditLog } = require("../../helper/audit");
 const router = express.Router();
 
 // Register
@@ -64,6 +65,8 @@ router.post("/", adminAuth, async (req, res) => {
   } catch (error) {
     console.error("Error creating seller:", error);
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_SELLER");
   }
 });
 
@@ -176,6 +179,8 @@ router.put("/:id", adminAuth, async (req, res) => {
     res.json(seller);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_SELLER");
   }
 });
 
@@ -202,6 +207,8 @@ router.put("/reset-device/:id", adminAuth, async (req, res) => {
     res.json(seller);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "RESET_SELLER_DEVICE");
   }
 });
 

@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const { generateCustomHoldId } = require("../../helper/generateHoldId");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
+const { auditLog } = require("../../helper/audit");
 
 router.post("/", adminAuth, async (req, res) => {
   const { amount, sellerId, date, note } = req.body;
@@ -118,6 +119,8 @@ router.post("/", adminAuth, async (req, res) => {
     if (!res.headersSent) {
       return res.status(500).json({ error: error.message });
     }
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_SELLER_WALLET");
   }
 });
 
@@ -169,6 +172,8 @@ router.post("/resetHold", adminAuth, async (req, res) => {
   } catch (error) {
     console.error("Error resetting hold:", error);
     res.status(500).json({ error: "Internal server error." });
+  } finally {
+    await auditLog(req, res, "ADMIN", "RESET_SELLER_HOLD");
   }
 });
 
@@ -352,6 +357,8 @@ router.delete("/:id", adminAuth, async (req, res) => {
     res.json({ message: "Wallet deleted and amount returned." });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DELETE_SELLER_WALLET");
   }
 });
 

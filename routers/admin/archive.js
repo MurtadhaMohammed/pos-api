@@ -4,6 +4,7 @@ const adminAuth = require("../../middleware/adminAuth");
 const router = express.Router();
 const XLSX = require("xlsx");
 const dayjs = require("dayjs");
+const { auditLog } = require("../../helper/audit");
 
 const checkExistCodes = async (codes) => {
   const stock = await prisma.stock.findMany({
@@ -120,6 +121,8 @@ router.post("/", adminAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_ARCHIVE");
   }
 });
 
@@ -229,6 +232,8 @@ router.delete("/:id", adminAuth, async (req, res) => {
     res.json({ message: "تم حذف الوجبة والمخزون بنجاح!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DELETE_ARCHIVE");
   }
 });
 
@@ -255,9 +260,12 @@ router.put("/active/:id", adminAuth, async (req, res) => {
         active,
       },
     });
+
     res.json({ message: "تم تعديل الوجبة والمخزون بنجاح!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_ARCHIVE_STATUS");
   }
 });
 
@@ -493,10 +501,13 @@ router.get("/download/:id", adminAuth, async (req, res) => {
     );
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", buffer.length);
+
     res.send(buffer);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message || "Error in server!" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DOWNLOAD_ARCHIVE");
   }
 });
 module.exports = router;

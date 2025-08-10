@@ -218,6 +218,19 @@ model Blocklist {
   createdAt DateTime @default(now())
 }
 
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  userId    Int?
+  userName  String?
+  userType  UserType @default(GUST)
+  action    String
+  path      String?
+  ip        String?
+  userAgent String?
+  status    Int      @default(200)
+}
+
 enum CodeStatus {
   Ready
   Error
@@ -231,6 +244,13 @@ enum AdminType {
   ADMIN
   PROVIDER
   AGENT
+}
+
+enum UserType {
+  ADMIN
+  PROVIDER
+  SELLER
+  GUST
 }
 
 enum FromWallet {
