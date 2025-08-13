@@ -1,5 +1,5 @@
 const express = require("express");
-// var cors = require("cors");
+var cors = require("cors");
 var cron = require("node-cron");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -24,6 +24,7 @@ const categoryRouter = require("./routers/admin/categories");
 const stockRouter = require("./routers/admin/stock");
 const providerCardsRouter = require("./routers/admin/providerCards");
 const permissionsRouter = require("./routers/admin/permissions");
+const logsRouter = require("./routers/admin/logs");
 const providersRouter = require("./routers/provider/index");
 const POSRouter = require("./routers/POS");
 const { resetHoldExpired } = require("./helper/resetHoldExpired");
@@ -32,7 +33,10 @@ const { initializeSocket } = require("./helper/socket");
 const { resetBlacklist } = require("./helper/resetExpiredTokens");
 require("dotenv").config();
 
-// app.use(cors());
+if (process.env.IS_DEV) {
+  app.use(cors());
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
@@ -63,6 +67,7 @@ app.use("/api/admin/category", categoryRouter);
 app.use("/api/admin/stock", stockRouter);
 app.use("/api/admin/provider-cards", providerCardsRouter);
 app.use("/api/admin/permissions", permissionsRouter);
+app.use("/api/admin/logs", logsRouter);
 
 app.use("/api/provider", providersRouter);
 
