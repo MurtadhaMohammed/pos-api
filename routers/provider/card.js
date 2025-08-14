@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const providerAuth = require("./middleware/providerAuth");
+const { auditLog } = require("../../helper/audit");
 // const { generateCustomHoldId } = require("../../helper/generateHoldId");
 const router = express.Router();
 
@@ -129,6 +130,8 @@ router.put("/:id", providerAuth, async (req, res) => {
     res.json(card);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "UPDATE_CARD");
   }
 });
 
@@ -226,6 +229,8 @@ router.post("/cardHolder", providerAuth, async (req, res) => {
       walletAmount: 0,
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "HOLD_CARD");
   }
 });
 
@@ -352,6 +357,8 @@ router.post("/purchase", providerAuth, async (req, res) => {
       message: "Error making request to external API",
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "PURCHASE_CARD");
   }
 });
 

@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
 const providerAuth = require("./middleware/providerAuth");
+const { auditLog } = require("../../helper/audit");
 const dayjs = require("dayjs");
 const { getSocketInstance, connectedUsers } = require("../../helper/socket");
 const getDateDifferenceType = require("../../helper/getDateDifferenceType");
@@ -48,6 +49,8 @@ router.post("/", providerAuth, async (req, res) => {
   } catch (error) {
     console.error("Error creating seller:", error);
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "CREATE_SELLER");
   }
 });
 
@@ -64,6 +67,8 @@ router.put("/:id", providerAuth, async (req, res) => {
     res.json(seller);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "UPDATE_SELLER");
   }
 });
 
@@ -126,6 +131,7 @@ router.put("/active/:id", providerAuth, async (req, res) => {
   }
 
   res.json(seller);
+  await auditLog(req, res, "PROVIDER", "UPDATE_SELLER_STATUS");
 });
 
 router.put("/reset-password/:id", providerAuth, async (req, res) => {
@@ -152,6 +158,8 @@ router.put("/reset-password/:id", providerAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: "Error updating password" });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "RESET_SELLER_PASSWORD");
   }
 });
 
