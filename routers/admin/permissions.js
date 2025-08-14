@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
 const allPermissions = require("../../constants/permissions.json");
+const { auditLog } = require("../../helper/audit");
 
 router.get("/all", adminAuth, async (req, res) => {
   try {
@@ -51,6 +52,8 @@ router.post("/add/:id", adminAuth, async (req, res) => {
     res.status(200).json(updatedAdmin.permissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "ADD_PERMISSIONS");
   }
 });
 
@@ -83,6 +86,8 @@ router.delete("/remove/:id", adminAuth, async (req, res) => {
     res.status(200).json(updatedAdmin.permissions);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "REMOVE_PERMISSIONS");
   }
 });
 

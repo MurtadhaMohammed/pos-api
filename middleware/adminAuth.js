@@ -26,7 +26,13 @@ const adminAuth = (req, res, next) => {
         id: parseInt(user?.id),
       },
     });
+
+    if (!admin) {
+      return res.status(403).json({ error: "Admin not found" });
+    }
+
     req.user = { ...user, permissions: admin?.permissions || [] };
+
     next();
   });
 };

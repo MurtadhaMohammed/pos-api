@@ -190,7 +190,19 @@ router.post("/verify", async (req, res) => {
     }
 
     const jti = uuidv4();
-    const token = jwt.sign({ ...seller, jti }, JWT_SECRET);
+    const payload = {
+      id: seller?.id,
+      name: seller?.name,
+      address: seller?.address,
+      phone: seller?.phone,
+      providerId: seller?.providerId,
+      walletAmount: seller?.walletAmount,
+      paymentAmount: seller?.paymentAmount,
+      isHajji: seller?.isHajji,
+      active: seller?.active,
+      jti,
+    };
+    const token = jwt.sign(payload, JWT_SECRET);
     res.json({ token, ...seller, password: "You can't see it 😉" });
   } catch (err) {
     console.error("OTP verify error:", err);

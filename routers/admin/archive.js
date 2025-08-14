@@ -4,14 +4,38 @@ const adminAuth = require("../../middleware/adminAuth");
 const router = express.Router();
 const XLSX = require("xlsx");
 const dayjs = require("dayjs");
+const { auditLog } = require("../../helper/audit");
+
+const checkExistCodes = async (codes) => {
+  const stock = await prisma.stock.findMany({
+    where: {
+      code: {
+        in: codes,
+      },
+    },
+  });
+
+  let existCodes = [];
+  codes.forEach((code) => {
+    let isExist = stock.find((el) => el.code === code);
+    if (isExist) {
+      existCodes.push(code);
+    }
+  });
+
+  return { isExist: existCodes?.length !== 0, existCodes };
+};
 
 // Create  Archive
 router.post("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("create_archive"))) {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_archive"))
+    ) {
       return res.status(400).json({ error: "No permission to create archive" });
     }
 
@@ -56,6 +80,15 @@ router.post("/", adminAuth, async (req, res) => {
       serial: String(el?.id),
     }));
 
+    let codes = stockData?.map((el) => el.code);
+    let { isExist, existCodes } = await checkExistCodes(codes);
+
+    if (isExist) {
+      return res
+        .status(500)
+        .json({ error: `${existCodes?.join(", ")} كودات مكرره` });
+    }
+
     const [archive] = await prisma.$transaction([
       prisma.archive.create({
         data: {
@@ -88,6 +121,8 @@ router.post("/", adminAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_ARCHIVE");
   }
 });
 
@@ -95,8 +130,11 @@ router.get("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("read_archive"))) {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_archive"))
+    ) {
       return res.status(400).json({ error: "No permission to read archive" });
     }
 
@@ -124,7 +162,7 @@ router.get("/", adminAuth, async (req, res) => {
             name: true,
             active: true,
             createtAt: true,
-          }
+          },
         },
         plan: true,
       },
@@ -144,8 +182,11 @@ router.delete("/:id", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("delete_archive"))) {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("delete_archive"))
+    ) {
       return res.status(400).json({ error: "No permission to delete archive" });
     }
 
@@ -191,6 +232,8 @@ router.delete("/:id", adminAuth, async (req, res) => {
     res.json({ message: "تم حذف الوجبة والمخزون بنجاح!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DELETE_ARCHIVE");
   }
 });
 
@@ -199,8 +242,11 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
-    if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("archive_status"))) {
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("archive_status"))
+    ) {
       return res.status(400).json({ error: "No permission to archive status" });
     }
 
@@ -214,9 +260,12 @@ router.put("/active/:id", adminAuth, async (req, res) => {
         active,
       },
     });
+
     res.json({ message: "تم تعديل الوجبة والمخزون بنجاح!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_ARCHIVE_STATUS");
   }
 });
 
@@ -224,8 +273,14 @@ router.get("/download/:id", adminAuth, async (req, res) => {
   const { permissions = [], type: userType } = req.user;
 
   try {
-    if (userType !== 'ADMIN' || !permissions.includes("superadmin") && !permissions.includes("read_archive")) {
-      return res.status(400).json({ error: "No permission to download archive" });
+    if (
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_archive"))
+    ) {
+      return res
+        .status(400)
+        .json({ error: "No permission to download archive" });
     }
 
     const id = parseInt(req.params.id);
@@ -238,14 +293,19 @@ router.get("/download/:id", adminAuth, async (req, res) => {
       include: {
         stock: {
           select: {
-            id: true, serial: true, code: true, status: true,
-            createdAt: true, sold_at: true, sellerId: true,
-            seller: { select: { id: true, name: true, username: true } }
-          }
+            id: true,
+            serial: true,
+            code: true,
+            status: true,
+            createdAt: true,
+            sold_at: true,
+            sellerId: true,
+            seller: { select: { id: true, name: true, username: true } },
+          },
         },
         provider: { select: { id: true, name: true } },
-        plan: { select: { id: true, title: true } }
-      }
+        plan: { select: { id: true, title: true } },
+      },
     });
 
     if (!archive) {
@@ -253,7 +313,9 @@ router.get("/download/:id", adminAuth, async (req, res) => {
     }
 
     if (!archive.stock?.length) {
-      return res.status(400).json({ error: "There is no stock for this archive!" });
+      return res
+        .status(400)
+        .json({ error: "There is no stock for this archive!" });
     }
 
     const archiveCreatedAt = dayjs(archive.createtAt);
@@ -262,17 +324,16 @@ router.get("/download/:id", adminAuth, async (req, res) => {
         Math.abs(archiveCreatedAt.diff(dayjs(item.createdAt), "minute")) > 1
     );
 
-
     if (invalidStock.length > 0) {
-      return res.status(400).json({ 
-        error: `Some items in the stock have a different creation date than the archive creation date. Please check the data.` 
+      return res.status(400).json({
+        error: `Some items in the stock have a different creation date than the archive creation date. Please check the data.`,
       });
     }
 
     const workbook = XLSX.utils.book_new();
-    
+
     const worksheet = {};
-    
+
     const headerStyle = {
       font: { bold: true },
       alignment: { horizontal: "center", vertical: "center" },
@@ -280,8 +341,8 @@ router.get("/download/:id", adminAuth, async (req, res) => {
         top: { style: "medium" },
         bottom: { style: "medium" },
         left: { style: "medium" },
-        right: { style: "medium" }
-      }
+        right: { style: "medium" },
+      },
     };
 
     const dataStyle = {
@@ -290,60 +351,77 @@ router.get("/download/:id", adminAuth, async (req, res) => {
         top: { style: "thin" },
         bottom: { style: "thin" },
         left: { style: "thin" },
-        right: { style: "thin" }
-      }
+        right: { style: "thin" },
+      },
     };
 
-    const stockHeaders = ['ID', 'Serial', 'Code', 'Status', 'Created At', 'Sold At', 'Seller ID', 'Seller Name', 'Seller Username'];
-    
+    const stockHeaders = [
+      "ID",
+      "Serial",
+      "Code",
+      "Status",
+      "Created At",
+      "Sold At",
+      "Seller ID",
+      "Seller Name",
+      "Seller Username",
+    ];
+
     stockHeaders.forEach((header, index) => {
       const col = String.fromCharCode(65 + index);
       worksheet[`${col}1`] = { v: header, s: headerStyle };
     });
 
-    const stockData = archive.stock.map(item => ({
-      'ID': item.id,
-      'Serial': item.serial,
-      'Code': item.code,
-      'Status': item.status,
-      'Created At': dayjs(item.createdAt).format('YYYY-MM-DD HH:mm:ss'),
-      'Sold At': item.sold_at ? dayjs(item.sold_at).format('YYYY-MM-DD HH:mm:ss') : '',
-      'Seller ID': item.sellerId || '',
-      'Seller Name': item.seller?.name || '',
-      'Seller Username': item.seller?.username || ''
+    const stockData = archive.stock.map((item) => ({
+      ID: item.id,
+      Serial: item.serial,
+      Code: item.code,
+      Status: item.status,
+      "Created At": dayjs(item.createdAt).format("YYYY-MM-DD HH:mm:ss"),
+      "Sold At": item.sold_at
+        ? dayjs(item.sold_at).format("YYYY-MM-DD HH:mm:ss")
+        : "",
+      "Seller ID": item.sellerId || "",
+      "Seller Name": item.seller?.name || "",
+      "Seller Username": item.seller?.username || "",
     }));
 
     stockData.forEach((item, index) => {
       const rowIndex = index + 2;
       const values = Object.values(item);
-      
+
       values.forEach((value, colIndex) => {
         const col = String.fromCharCode(65 + colIndex);
-        worksheet[`${col}${rowIndex}`] = { 
-          v: value, 
-          s: dataStyle
+        worksheet[`${col}${rowIndex}`] = {
+          v: value,
+          s: dataStyle,
         };
       });
     });
 
     const archiveInfo = [
-      ['Archive ID', archive.id],
-      ['Group Title', archive.group_title],
-      ['Quantity', archive.qty],
-      ['Reception Date', archive.reciption_date ? dayjs(archive.reciption_date).format('YYYY-MM-DD') : ''],
-      ['Note', archive.note || ''],
-      ['Active', archive.active ? 'Yes' : 'No'],
-      ['Created At', dayjs(archive.createtAt).format('YYYY-MM-DD HH:mm:ss')],
-      ['Provider ID', archive.provider?.id || ''],
-      ['Provider Name', archive.provider?.name || ''],
-      ['Plan ID', archive.plan?.id || ''],
-      ['Plan Title', archive.plan?.title || '']
+      ["Archive ID", archive.id],
+      ["Group Title", archive.group_title],
+      ["Quantity", archive.qty],
+      [
+        "Reception Date",
+        archive.reciption_date
+          ? dayjs(archive.reciption_date).format("YYYY-MM-DD")
+          : "",
+      ],
+      ["Note", archive.note || ""],
+      ["Active", archive.active ? "Yes" : "No"],
+      ["Created At", dayjs(archive.createtAt).format("YYYY-MM-DD HH:mm:ss")],
+      ["Provider ID", archive.provider?.id || ""],
+      ["Provider Name", archive.provider?.name || ""],
+      ["Plan ID", archive.plan?.id || ""],
+      ["Plan Title", archive.plan?.title || ""],
     ];
 
     const startRow = stockData.length + 3;
-    
-    worksheet[`A${startRow}`] = { 
-      v: 'Archive Information', 
+
+    worksheet[`A${startRow}`] = {
+      v: "Archive Information",
       s: {
         font: { bold: true, size: 14 },
         alignment: { horizontal: "center", vertical: "center" },
@@ -351,12 +429,14 @@ router.get("/download/:id", adminAuth, async (req, res) => {
           top: { style: "medium" },
           bottom: { style: "medium" },
           left: { style: "medium" },
-          right: { style: "medium" }
-        }
-      }
+          right: { style: "medium" },
+        },
+      },
     };
-    
-    worksheet['!merges'] = [{ s: { c: 0, r: startRow - 1 }, e: { c: 1, r: startRow - 1 } }];
+
+    worksheet["!merges"] = [
+      { s: { c: 0, r: startRow - 1 }, e: { c: 1, r: startRow - 1 } },
+    ];
 
     const infoLabelStyle = {
       font: { bold: true },
@@ -365,8 +445,8 @@ router.get("/download/:id", adminAuth, async (req, res) => {
         top: { style: "thin" },
         bottom: { style: "thin" },
         left: { style: "thin" },
-        right: { style: "thin" }
-      }
+        right: { style: "thin" },
+      },
     };
 
     const infoValueStyle = {
@@ -375,8 +455,8 @@ router.get("/download/:id", adminAuth, async (req, res) => {
         top: { style: "thin" },
         bottom: { style: "thin" },
         left: { style: "thin" },
-        right: { style: "thin" }
-      }
+        right: { style: "thin" },
+      },
     };
 
     archiveInfo.forEach(([field, value], index) => {
@@ -385,7 +465,7 @@ router.get("/download/:id", adminAuth, async (req, res) => {
       worksheet[`B${row}`] = { v: value, s: infoValueStyle };
     });
 
-    worksheet['!cols'] = [
+    worksheet["!cols"] = [
       { wch: 12 }, // ID
       { wch: 20 }, // Serial
       { wch: 15 }, // Code
@@ -394,33 +474,40 @@ router.get("/download/:id", adminAuth, async (req, res) => {
       { wch: 20 }, // Sold At
       { wch: 12 }, // Seller ID
       { wch: 20 }, // Seller Name
-      { wch: 20 }  // Seller Username
+      { wch: 20 }, // Seller Username
     ];
-    
-    worksheet['!rows'] = [
+
+    worksheet["!rows"] = [
       { hpt: 25 }, // Header row
       ...Array(stockData.length).fill({ hpt: 20 }), // Data rows
       { hpt: 15 }, // Empty row
       { hpt: 25 }, // Archive info title
-      ...Array(archiveInfo.length).fill({ hpt: 20 }) // Archive info rows
+      ...Array(archiveInfo.length).fill({ hpt: 20 }), // Archive info rows
     ];
-    
+
     const totalRows = startRow + archiveInfo.length;
-    worksheet['!ref'] = `A1:I${totalRows}`;
+    worksheet["!ref"] = `A1:I${totalRows}`;
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Archive Data');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Archive Data");
 
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    const filename = `archive_${archive.id}_${dayjs().format('YYYY-MM-DD')}.xlsx`;
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const filename = `archive_${archive.id}_${dayjs().format(
+      "YYYY-MM-DD"
+    )}.xlsx`;
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length', buffer.length);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+
     res.send(buffer);
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message || "Error in server!" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DOWNLOAD_ARCHIVE");
   }
 });
 module.exports = router;

@@ -3,7 +3,6 @@ const prisma = require("../../prismaClient");
 const bcrypt = require("bcrypt");
 const adminAuth = require("../../middleware/adminAuth");
 const dashboardAuth = require("../../middleware/dashboardAuth");
-const providerAuth = require("../../middleware/providerAuth");
 const router = express.Router();
 const FormData = require("form-data");
 const fetch = (...args) =>
@@ -14,19 +13,18 @@ router.post("/", adminAuth, async (req, res) => {
   const { name, phone, address, username, password } = req.body;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  
-  try {
 
+  try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("create_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_provider"))
     ) {
-      return res.status(400).json({ error: "No permission to create provider" });
+      return res
+        .status(400)
+        .json({ error: "No permission to create provider" });
     }
-    
+
     // Hash the admin password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -57,23 +55,21 @@ router.post("/", adminAuth, async (req, res) => {
     res
       .status(400)
       .json({ error: "Error creating provider and admin account" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_PROVIDER");
   }
 });
 
 // Read all Providers
 router.get("/", adminAuth, async (req, res) => {
-
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
- 
-  try {
 
+  try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider"))
     ) {
       return res.status(400).json({ error: "No permission to read providers" });
     }
@@ -109,13 +105,13 @@ router.get("/", adminAuth, async (req, res) => {
         address: true,
         active: true,
         createtAt: true,
-        walletAmount:true,
+        walletAmount: true,
         admin: {
           select: {
             id: true,
             name: true,
             username: true,
-          }
+          },
         },
       },
       take,
@@ -135,16 +131,12 @@ router.get("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
-  
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider"))
     ) {
       return res.status(400).json({ error: "No permission to read provider" });
     }
@@ -164,17 +156,16 @@ router.put("/:id", adminAuth, async (req, res) => {
   const { name, phone, address } = req.body;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
- 
-  try {
 
+  try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("update_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_provider"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider" });
     }
 
     const provider = await prisma.provider.update({
@@ -185,6 +176,8 @@ router.put("/:id", adminAuth, async (req, res) => {
   } catch (error) {
     console.error("Transaction error:", error);
     res.status(500).json({ error: "Failed to update provider/admin" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_PROVIDER");
   }
 });
 
@@ -194,15 +187,14 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("update_provider_status")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_provider_status"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider" });
     }
 
     const provider = await prisma.provider.findUnique({
@@ -223,6 +215,8 @@ router.put("/active/:id", adminAuth, async (req, res) => {
     res.json(updatedProvider);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_PROVIDER_STATUS");
   }
 });
 
@@ -234,13 +228,13 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
 
   try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("reset_password_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("reset_password_provider"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -267,21 +261,10 @@ router.put("/reset-password/:id", adminAuth, async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(400).json({ error: "Error updating password" + error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "RESET_PASSWORD_PROVIDER");
   }
 });
-
-// so the provider can see his data in about section
-// router.get("/about/:id", dashboardAuth, async (req, res) => {
-//   const providerId = req.params.id;
-//   try {
-//     const provider = await prisma.provider.findUnique({
-//       where: { id: parseInt(providerId) },
-//     });
-//     res.json(provider);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
 
 router.get("/summary/:id", dashboardAuth, async (req, res) => {
   const providerId = req.params.id;
@@ -293,13 +276,10 @@ router.get("/summary/:id", dashboardAuth, async (req, res) => {
   }
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider"))
     ) {
       return res.status(400).json({ error: "No permission to read provider" });
     }
@@ -370,13 +350,13 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   try {
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("update_price_provider")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_price_provider"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider price" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider price" });
     }
     const card = await prisma.card.findUnique({ where: { id: parseInt(id) } });
 
@@ -399,20 +379,27 @@ router.put("/update-price/:id", dashboardAuth, async (req, res) => {
   } catch (error) {
     console.error("Error updating provider price:", error);
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_PROVIDER_PRICE");
   }
 });
 
 const dayjs = require("dayjs");
 const getDateDifferenceType = require("../../helper/getDateDifferenceType");
+const { auditLog } = require("../../helper/audit");
 
 router.get("/info/all", adminAuth, async (req, res) => {
   let { filterType, providerId, startDate, endDate } = req.query;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
-
-  if (userType !== 'ADMIN' || (!permissions.includes("superadmin") && !permissions.includes("statistics"))) {
-    return res.status(400).json({ error: "No permission to read provider statistics" });
+  if (
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") && !permissions.includes("statistics"))
+  ) {
+    return res
+      .status(400)
+      .json({ error: "No permission to read provider statistics" });
   }
 
   if (
@@ -556,11 +543,14 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
-  if(userType !== 'ADMIN' || 
-    (!permissions.includes("superadmin") && 
-    !permissions.includes("read_provider_report"))
+  if (
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") &&
+      !permissions.includes("read_provider_report"))
   ) {
-    return res.status(400).json({ error: "No permission to read provider report" });
+    return res
+      .status(400)
+      .json({ error: "No permission to read provider report" });
   }
 
   try {
@@ -578,6 +568,7 @@ router.patch("/report/:id", adminAuth, async (req, res) => {
     const sellerWallet = await prisma.wallet.findMany({
       where: {
         providerId,
+        type: "PAYMENT",
       },
       select: {
         id: true,

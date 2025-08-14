@@ -3,23 +3,23 @@ const prisma = require("../../prismaClient");
 const adminAuth = require("../../middleware/adminAuth");
 const { holdCard } = require("../../helper/holdCard");
 const { purchase } = require("../../helper/purchase");
+const { auditLog } = require("../../helper/audit");
 const router = express.Router();
 
 router.get("/:providerId", adminAuth, async (req, res) => {
-  const permissions = req.user.permissions || []; 
+  const permissions = req.user.permissions || [];
   const userType = req.user.type;
   const providerId = parseInt(req.params.providerId, 10);
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_provider_cards")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_provider_cards"))
     ) {
-      return res.status(400).json({ error: "No permission to read provider cards" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read provider cards" });
     }
 
     const provider = await prisma.provider.findUnique({
@@ -78,13 +78,13 @@ router.post("/", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   if (
-    userType !== 'ADMIN' || 
-    (
-      !permissions.includes("superadmin") &&
-      !permissions.includes("create_provider_cards")
-    )
+    userType !== "ADMIN" ||
+    (!permissions.includes("superadmin") &&
+      !permissions.includes("create_provider_cards"))
   ) {
-    return res.status(400).json({ error: "No permission to update provider cards" });
+    return res
+      .status(400)
+      .json({ error: "No permission to update provider cards" });
   }
 
   try {
@@ -114,6 +114,8 @@ router.post("/", adminAuth, async (req, res) => {
     res.json({ data: customPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_PROVIDER_CARDS");
   }
 });
 
@@ -122,15 +124,14 @@ router.put("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("update_provider_cards")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("update_provider_cards"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider cards" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider cards" });
     }
 
     const { type, providerId } = req?.user;
@@ -172,6 +173,8 @@ router.put("/:id", adminAuth, async (req, res) => {
     res.json({ data: updatedCustomPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_PROVIDER_CARDS");
   }
 });
 
@@ -180,15 +183,14 @@ router.put("/active/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("provider_cards_status")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("provider_cards_status"))
     ) {
-      return res.status(400).json({ error: "No permission to update provider cards" });
+      return res
+        .status(400)
+        .json({ error: "No permission to update provider cards" });
     }
 
     const id = parseInt(req.params.id, 10);
@@ -204,6 +206,8 @@ router.put("/active/:id", adminAuth, async (req, res) => {
     res.json({ data: customPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_PROVIDER_CARDS_STATUS");
   }
 });
 
@@ -212,18 +216,15 @@ router.post("/cardHolder", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("create_payment")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_payment"))
     ) {
       return res.status(400).json({ error: "No permission to create payment" });
     }
-  
-    let resp = await holdCard(providerCardId, quantity, sellerId , true);
+
+    let resp = await holdCard(providerCardId, quantity, sellerId, true);
     if (resp.error) {
       return res.status(500).json(resp);
     }
@@ -233,6 +234,8 @@ router.post("/cardHolder", adminAuth, async (req, res) => {
       walletAmount: 0,
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_HOLD_CARD");
   }
 });
 
@@ -243,13 +246,10 @@ router.post("/purchase", adminAuth, async (req, res) => {
   const userType = req.user.type;
   const permissions = req.user.permissions || [];
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("create_payment")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_payment"))
     ) {
       return res.status(400).json({ error: "No permission to create payment" });
     }
@@ -279,6 +279,8 @@ router.post("/purchase", adminAuth, async (req, res) => {
     res.status(500).json({
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_PURCHASE");
   }
 });
 

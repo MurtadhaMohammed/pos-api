@@ -1,105 +1,11 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
-const sellerAuth = require("../../middleware/sellerAuth");
-const dashboardAuth = require("../../middleware/dashboardAuth");
 const dayjs = require("dayjs");
 const adminAuth = require("../../middleware/adminAuth");
-const providerAuth = require("../../middleware/providerAuth");
 const getDateDifferenceType = require("../../helper/getDateDifferenceType");
+const { auditLog } = require("../../helper/audit");
 // const agentAuth = require("../../middleware/agentAuth");
 const router = express.Router();
-
-// Create Payment
-// router.post("/", sellerAuth, async (req, res) => {
-//   const user = req.user;
-
-//   const {
-//     companyCardID,
-//     price,
-//     qty,
-//     providerCardID,
-//     item,
-//   } = req.body;
-
-//   try {
-//     const payment = await prisma.payment.create({
-//       data: {
-//         companyCardID,
-//         price,
-//         qty,
-//         providerId: user.providerId,
-//         sellerId: user.id,
-//         providerCardID,
-//         item,
-//       },
-//     });
-//     res.json(payment);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
-// Create Payment
-// router.post("/create", sellerAuth, async (req, res) => {
-//   const { providerId, sellerId, code, companyCardID, cardId } = req.body;
-//   try {
-//     const card = await prisma.card.findUnique({
-//       where: {
-//         id: parseInt(cardId),
-//       },
-//       include: {
-//         cardType: true,
-//       },
-//     });
-
-//     const data = {
-//       id: companyCardID,
-//       code,
-//       status: "sold",
-//       details: {
-//         cover: card.cardType.image,
-//         price: card.companyPrice,
-//         title: card.cardType.name,
-//       },
-//       createdAt: "2024-10-03T11:35:24.158Z",
-//       updatedAt: "2024-10-03T19:02:13.170Z",
-//     };
-
-//     const payment = await prisma.payment.create({
-//       data: {
-//         provider: {
-//           connect: { id: parseInt(providerId) },
-//         },
-//         seller: {
-//           connect: { id: parseInt(sellerId) },
-//         },
-//         companyCardID: parseInt(companyCardID),
-//         price: card?.price,
-//         companyPrice: card?.companyPrice,
-//         qty: 1,
-//         providerCardID: parseInt(cardId),
-//         item: data,
-//       },
-//     });
-
-//     await prisma.seller.update({
-//       where: {
-//         id: parseInt(sellerId),
-//       },
-//       data: {
-//         walletAmount: {
-//           decrement: card?.companyPrice,
-//         },
-//         paymentAmount: {
-//           increment: card?.companyPrice,
-//         },
-//       },
-//     });
-//     req.status(200).json(payment);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
 
 // Read all Payments
 router.get("/", adminAuth, async (req, res) => {
@@ -179,13 +85,13 @@ router.get("/", adminAuth, async (req, res) => {
             name: true,
             username: true,
             providerId: true,
-          }
+          },
         },
         provider: {
           select: {
             id: true,
             name: true,
-          }
+          },
         },
       },
       skip: skip,
@@ -208,58 +114,6 @@ router.get("/", adminAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// Get payment cards
-// router.get("/pos/:id", dashboardAuth, async (req, res) => {
-//   const { id } = req.params;
-//   const { startDate, endDate } = req.query;
-
-//   try {
-//     const dateFilter =
-//       startDate && endDate
-//         ? {
-//             createtAt: {
-//               gte: new Date(startDate),
-//               lte: new Date(endDate),
-//             },
-//           }
-//         : {};
-
-//     const payments = await prisma.payment.findMany({
-//       where: {
-//         sellerId: parseInt(id),
-//         ...dateFilter,
-//       },
-//       select: {
-//         item: true,
-//         price: true,
-//         companyPrice: true,
-//       },
-//     });
-
-//     let data = {
-//       total: payments?.length,
-//       price: payments?.map((el) => el.price)?.reduce((a, b) => a + b, 0),
-//       companyPrice: payments
-//         ?.map((el) => el.companyPrice)
-//         ?.reduce((a, b) => a + b, 0),
-//       details: Object.entries(
-//         payments.reduce((acc, current) => {
-//           const title = current.item.details.title;
-//           if (!acc[title]) {
-//             acc[title] = 0;
-//           }
-//           acc[title] += 1;
-//           return acc;
-//         }, {})
-//       ).map(([title, count]) => ({ title, count })),
-//     };
-
-//     res.status(200).json(data);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
 
 router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
   const { paymentId } = req.params;
@@ -334,122 +188,12 @@ router.delete("/refund/:paymentId", adminAuth, async (req, res) => {
       msg: "Internal server error",
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "ADMIN", "REFUND_PAYMENT");
   }
 });
 
-// router.get("/info/:agentId", async (req, res) => {
-//   const { agentId } = req.params;
 
-//   const payments = await prisma.payment.findMany({
-//     where: {
-//       agentId: parseInt(agentId),
-//     },
-//   });
-
-//   let numberOfCards = payments.map((el) => el?.qty).reduce((a, b) => a + b, 0);
-//   let cards = payments.map((el) => ({
-//     title: el?.item[0]?.details?.title,
-//     qty: el?.qty,
-//     sellerPayments: el?.price * el?.qty,
-//     agentPayments: el?.companyPrice * el?.qty,
-//     // providerPayments: el?.localCard?.companyPrice * el?.qty,
-//     sellerProfit: el?.price * el?.qty - el?.companyPrice * el?.qty,
-//     agentProfit:
-//       el?.companyPrice * el?.qty - el?.localCard?.companyPrice * el?.qty,
-//   }));
-
-//   const groupedCards = Object.values(
-//     cards.reduce((acc, card) => {
-//       if (!acc[card.title]) {
-//         acc[card.title] = {
-//           title: card.title,
-//           qty: 0,
-//           sellerPayments: 0,
-//           agentPayments: 0,
-//           // providerPayments: 0,
-//           sellerProfit: 0,
-//           agentProfit: 0,
-//         };
-//       }
-//       acc[card.title].qty += card.qty;
-//       acc[card.title].sellerPayments += card.sellerPayments;
-//       acc[card.title].agentPayments += card.agentPayments;
-//       acc[card.title].sellerProfit += card.sellerProfit;
-//       acc[card.title].agentProfit += card.agentProfit;
-//       // acc[card.title].providerPayments += card.providerPayments;
-//       return acc;
-//     }, {})
-//   );
-
-//   res.json({ success: true, numberOfCards, cards: groupedCards });
-// });
-
-// router.get("/info/agent/:agentId", dashboardAuth, async (req, res) => {
-//   const { agentId } = req.params;
-//   const { startDate, endDate } = req.query;
-
-//   const parsedStartDate = startDate ? new Date(startDate) : null;
-//   const parsedEndDate = endDate ? new Date(endDate) : null;
-
-//   const whereCondition = {
-//     agentId: parseInt(agentId),
-//   };
-
-//   if (parsedStartDate && parsedEndDate) {
-//     whereCondition.createtAt = {
-//       gte: parsedStartDate,
-//       lte: parsedEndDate,
-//     };
-//   } else if (parsedStartDate) {
-//     whereCondition.createtAt = {
-//       gte: parsedStartDate,
-//     };
-//   } else if (parsedEndDate) {
-//     whereCondition.createtAt = {
-//       lte: parsedEndDate,
-//     };
-//   }
-
-//   const payments = await prisma.payment.findMany({
-//     where: whereCondition,
-//   });
-
-//   let numberOfCards = payments
-//     .map((el) => el?.qty || 0)
-//     .reduce((a, b) => a + b, 0);
-//   let cards = payments.map((el) => {
-//     const item = Array.isArray(el?.item) ? el?.item[0] : el?.item || {};
-//     const details = item?.details || {};
-
-//     return {
-//       title: details?.title || "Unknown Title",
-//       qty: el?.qty || 0,
-//       agentPayments: (el?.localCard?.sellerPrice || 0) * (el?.qty || 0),
-//       agentProfit:
-//         (el?.localCard?.sellerPrice || 0) * (el?.qty || 0) -
-//         (el?.localCard?.companyPrice || 0) * (el?.qty || 0),
-//     };
-//   });
-
-//   const groupedCards = Object.values(
-//     cards.reduce((acc, card) => {
-//       if (!acc[card.title]) {
-//         acc[card.title] = {
-//           title: card.title,
-//           qty: 0,
-//           agentPayments: 0,
-//           agentProfit: 0,
-//         };
-//       }
-//       acc[card.title].qty += card.qty;
-//       acc[card.title].agentPayments += card.agentPayments;
-//       acc[card.title].agentProfit += card.agentProfit;
-//       return acc;
-//     }, {})
-//   );
-
-//   res.json({ success: true, numberOfCards, cards: groupedCards });
-// });
 
 router.get("/info/seller/:sellerId", adminAuth, async (req, res) => {
   const { sellerId } = req.params;
