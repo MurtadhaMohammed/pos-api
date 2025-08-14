@@ -957,6 +957,7 @@ router.post("/active", sellerAuth, async (req, res) => {
           activeBy: {
             sellerId,
             name: name || "Unknown Seller",
+            activeAt: dayjs().toISOString(),
           },
         },
       });
