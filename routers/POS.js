@@ -889,17 +889,44 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
 // });
 
 router.post("/active", sellerAuth, async (req, res) => {
-  const { paymentId, macAddress, activeCode } = req.body;
-  const { id, isHajji, name, username } = req?.user;
+  const { macAddress, activeCode } = req.body;
+  const { id, isHajji, name } = req?.user;
   const sellerId = parseInt(id, 10);
-  console.log({ sellerId, isHajji, name, username, paymentId });
+
   if (!macAddress || !activeCode) {
     return res
       .status(400)
       .json({ message: "macAddress and activeCode are required" });
   }
-  if (!isHajji && !paymentId) {
-    return res.status(400).json({ message: "paymentId is required" });
+
+  const rows = await prisma.$queryRaw`
+    SELECT p.*
+    FROM "Payment" p
+    WHERE EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(
+            CASE
+              WHEN jsonb_typeof(p."item") = 'array' THEN p."item"
+              ELSE '[]'::jsonb
+            END
+          ) AS elem
+      WHERE elem->>'code' = ${activeCode}
+    )
+    LIMIT 1
+  `;
+
+  if (!rows || rows.length === 0) {
+    return res
+      .status(404)
+      .json({ message: "No payment found with the given activeCode" });
+  }
+
+  if (rows[0]?.activeBy?.sellerId) {
+    return res.status(400).json({ message: "This code is already active!" });
+  }
+
+  if (rows[0]?.sellerId !== sellerId && !isHajji) {
+    return res.status(400).json({ message: "You can't active this code!" });
   }
 
   try {
@@ -924,13 +951,12 @@ router.post("/active", sellerAuth, async (req, res) => {
     if (response.status === 200 && !isHajji) {
       await prisma.payment.update({
         where: {
-          id: parseInt(paymentId),
+          id: parseInt(rows[0]?.id, 10),
         },
         data: {
           activeBy: {
             sellerId,
-            name,
-            username,
+            name: name || "Unknown Seller",
           },
         },
       });
