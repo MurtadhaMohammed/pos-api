@@ -1035,7 +1035,8 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
     const invoiceNumber = `#${payment?.id}`;
     const cardName = items[0]?.details?.title;
     // const codes = items?.map((item) => item?.code);
-    const code = items[0]?.code;
+    // const code = items[0]?.code;
+    const code = String(items?.[0]?.code ?? '').replaceAll(' ', '');
     const stock = await prisma.stock.findFirst({
       where: {
         code,
