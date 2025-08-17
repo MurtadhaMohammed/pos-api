@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const providerAuth = require("./middleware/providerAuth");
+const { auditLog } = require("../../helper/audit");
 const { generateCustomHoldId } = require("../../helper/generateHoldId");
 const router = express.Router();
 
@@ -94,6 +95,8 @@ router.post("/", providerAuth, async (req, res) => {
     if (!res.headersSent) {
       return res.status(500).json({ error: error.message });
     }
+  } finally {
+    await auditLog(req, res, "PROVIDER", "CREATE_WALLET");
   }
 });
 
@@ -287,6 +290,8 @@ router.delete("/:id", providerAuth, async (req, res) => {
     res.json({ message: "Wallet transaction deleted and amount returned" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "DELETE_WALLET");
   }
 });
 

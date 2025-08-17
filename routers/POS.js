@@ -3,6 +3,7 @@ const prisma = require("../prismaClient");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sellerAuth = require("../middleware/sellerAuth");
+const { auditLog } = require("../helper/audit");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const router = express.Router();
@@ -207,6 +208,8 @@ router.post("/verify", async (req, res) => {
   } catch (err) {
     console.error("OTP verify error:", err);
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await auditLog(req, res, "SELLER", "VERIFY_OTP");
   }
 });
 
@@ -284,6 +287,8 @@ router.post("/logout", sellerAuth, async (req, res) => {
     res.status(200).json({ message: "Logout Succefulley.!" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await auditLog(req, res, "SELLER", "LOGOUT");
   }
 });
 
@@ -621,6 +626,8 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       walletAmount: 0,
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "HOLD_CARD");
   }
 });
 
@@ -638,6 +645,8 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
     res.status(500).json({
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "PURCHASE_CARD");
   }
 });
 
@@ -972,6 +981,8 @@ router.post("/active", sellerAuth, async (req, res) => {
       message: "Error making request to external API",
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "ACTIVATE_CODE");
   }
 });
 
@@ -1004,6 +1015,8 @@ router.post("/refresh", sellerAuth, async (req, res) => {
       message: "Error making request to external API",
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "REFRESH_ACCOUNT");
   }
 });
 

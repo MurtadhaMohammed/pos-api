@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../../prismaClient");
 const providerAuth = require("./middleware/providerAuth");
+const { auditLog } = require("../../helper/audit");
 const { holdCard } = require("../../helper/holdCard");
 const { purchase } = require("../../helper/purchase");
 const router = express.Router();
@@ -88,6 +89,8 @@ router.post("/", providerAuth, async (req, res) => {
     res.json({ data: customPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "CREATE_PROVIDER_CARD");
   }
 });
 
@@ -132,6 +135,8 @@ router.put("/:id", providerAuth, async (req, res) => {
     res.json({ data: updatedCustomPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "UPDATE_PROVIDER_CARD");
   }
 });
 
@@ -150,6 +155,8 @@ router.put("/active/:id", providerAuth, async (req, res) => {
     res.json({ data: customPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "UPDATE_PROVIDER_CARD_STATUS");
   }
 });
 
@@ -173,6 +180,8 @@ router.post("/cardHolder", providerAuth, async (req, res) => {
       walletAmount: 0,
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "HOLD_PROVIDER_CARD");
   }
 });
 
@@ -207,6 +216,8 @@ router.post("/purchase", providerAuth, async (req, res) => {
     res.status(500).json({
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "PROVIDER", "PURCHASE_PROVIDER_CARD");
   }
 });
 
