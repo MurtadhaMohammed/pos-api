@@ -3,6 +3,7 @@ const prisma = require("../prismaClient");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sellerAuth = require("../middleware/sellerAuth");
+const { auditLog } = require("../helper/audit");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const router = express.Router();
@@ -190,11 +191,25 @@ router.post("/verify", async (req, res) => {
     }
 
     const jti = uuidv4();
-    const token = jwt.sign({ ...seller, jti }, JWT_SECRET);
+    const payload = {
+      id: seller?.id,
+      name: seller?.name,
+      address: seller?.address,
+      phone: seller?.phone,
+      providerId: seller?.providerId,
+      walletAmount: seller?.walletAmount,
+      paymentAmount: seller?.paymentAmount,
+      isHajji: seller?.isHajji,
+      active: seller?.active,
+      jti,
+    };
+    const token = jwt.sign(payload, JWT_SECRET);
     res.json({ token, ...seller, password: "You can't see it 😉" });
   } catch (err) {
     console.error("OTP verify error:", err);
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await auditLog(req, res, "SELLER", "VERIFY_OTP");
   }
 });
 
@@ -272,6 +287,8 @@ router.post("/logout", sellerAuth, async (req, res) => {
     res.status(200).json({ message: "Logout Succefulley.!" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await auditLog(req, res, "SELLER", "LOGOUT");
   }
 });
 
@@ -609,6 +626,8 @@ router.post("/cardHolder", sellerAuth, async (req, res) => {
       walletAmount: 0,
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "HOLD_CARD");
   }
 });
 
@@ -626,6 +645,8 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
     res.status(500).json({
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "PURCHASE_CARD");
   }
 });
 
@@ -877,17 +898,44 @@ router.post("/v2/purchase", sellerAuth, async (req, res) => {
 // });
 
 router.post("/active", sellerAuth, async (req, res) => {
-  const { paymentId, macAddress, activeCode } = req.body;
-  const { id, isHajji, name, username } = req?.user;
+  const { macAddress, activeCode } = req.body;
+  const { id, isHajji, name } = req?.user;
   const sellerId = parseInt(id, 10);
-  console.log({ sellerId, isHajji, name, username, paymentId });
+
   if (!macAddress || !activeCode) {
     return res
       .status(400)
       .json({ message: "macAddress and activeCode are required" });
   }
-  if (!isHajji && !paymentId) {
-    return res.status(400).json({ message: "paymentId is required" });
+
+  const rows = await prisma.$queryRaw`
+    SELECT p.*
+    FROM "Payment" p
+    WHERE EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(
+            CASE
+              WHEN jsonb_typeof(p."item") = 'array' THEN p."item"
+              ELSE '[]'::jsonb
+            END
+          ) AS elem
+      WHERE elem->>'code' = ${activeCode}
+    )
+    LIMIT 1
+  `;
+
+  if (!rows || rows.length === 0) {
+    return res
+      .status(404)
+      .json({ message: "No payment found with the given activeCode" });
+  }
+
+  if (rows[0]?.activeBy?.sellerId) {
+    return res.status(400).json({ message: "This code is already active!" });
+  }
+
+  if (rows[0]?.sellerId !== sellerId && !isHajji) {
+    return res.status(400).json({ message: "You can't active this code!" });
   }
 
   try {
@@ -909,16 +957,16 @@ router.post("/active", sellerAuth, async (req, res) => {
 
     let data = await response.json();
 
-    if (response.status === 200 && !isHajji) {
+    if (response.status === 200) {
       await prisma.payment.update({
         where: {
-          id: parseInt(paymentId),
+          id: parseInt(rows[0]?.id, 10),
         },
         data: {
           activeBy: {
             sellerId,
-            name,
-            username,
+            name: name || "Unknown Seller",
+            activeAt: dayjs().toISOString(),
           },
         },
       });
@@ -933,6 +981,8 @@ router.post("/active", sellerAuth, async (req, res) => {
       message: "Error making request to external API",
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "ACTIVATE_CODE");
   }
 });
 
@@ -965,6 +1015,8 @@ router.post("/refresh", sellerAuth, async (req, res) => {
       message: "Error making request to external API",
       error: error.message,
     });
+  } finally {
+    await auditLog(req, res, "SELLER", "REFRESH_ACCOUNT");
   }
 });
 
@@ -996,7 +1048,8 @@ router.get("/invoice/:id", sellerAuth, async (req, res) => {
     const invoiceNumber = `#${payment?.id}`;
     const cardName = items[0]?.details?.title;
     // const codes = items?.map((item) => item?.code);
-    const code = items[0]?.code;
+    // const code = items[0]?.code;
+    const code = String(items?.[0]?.code ?? '').replaceAll(' ', '');
     const stock = await prisma.stock.findFirst({
       where: {
         code,

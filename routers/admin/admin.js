@@ -6,11 +6,10 @@ const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
 const permissions = require("../../constants/permissions.json");
 const dayjs = require("dayjs");
-const { otpLimiter } = require("../../middleware/rateLimit");
-const { CodeStatus } = require("@prisma/client");
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args));
 const allPermissions = require("../../constants/permissions.json");
+const { auditLog } = require("../../helper/audit");
 
 const JWT_SECRET = process.env.JWT_SECRET; // Replace with your actual secret
 
@@ -49,6 +48,34 @@ router.post("/reset", adminAuth, async (req, res) => {
     res.json(admin);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "ADMIN_RESET_PASSWORD");
+  }
+});
+
+router.put("/reset/:id", adminAuth, async (req, res) => {
+  const { password } = req.body;
+  const { id } = req.params;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+
+  if (userType !== "ADMIN" || !userPermissions.includes("superadmin")) {
+    return res
+      .status(403)
+      .json({ error: "No permission to reset admin password!" });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await prisma.admin.update({
+      where: { id: parseInt(id) },
+      data: { password: hashedPassword },
+    });
+    res.json({ message: "تم التعديل بنجاح" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "ADMIN_RESET_PASSWORD");
   }
 });
 
@@ -360,6 +387,43 @@ router.put("/:id/permissions", adminAuth, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_ADMIN_PERMISSIONS");
+  }
+});
+
+router.put("/update/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const userPermissions = req.user.permissions || [];
+  const userType = req.user.type;
+  const userId = req.user.id;
+
+  if (parseInt(id) === userId) {
+    return res
+      .status(403)
+      .json({ error: "You cannot modify your own permissions!" });
+  }
+
+  if (userType !== "ADMIN" || !userPermissions.includes("superadmin")) {
+    return res
+      .status(403)
+      .json({ error: "No permission to update admin permissions!" });
+  }
+
+  try {
+    const updatedAdmin = await prisma.admin.update({
+      where: { id: parseInt(id) },
+      data: req.body,
+    });
+
+    res.status(200).json({
+      data: updatedAdmin,
+      message: "Admin updated successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "UPDATE_ADMIN");
   }
 });
 
@@ -418,6 +482,8 @@ router.post("/create", adminAuth, async (req, res) => {
   } catch (error) {
     console.error("Error creating admin:", error);
     res.status(500).json({ error: "Failed to create admin" });
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_ADMIN");
   }
 });
 

@@ -3,6 +3,7 @@ const prisma = require("../../prismaClient");
 const { generateCustomHoldId } = require("../../helper/generateHoldId");
 const router = express.Router();
 const adminAuth = require("../../middleware/adminAuth");
+const { auditLog } = require("../../helper/audit");
 
 router.post("/", adminAuth, async (req, res) => {
   const { amount, sellerId, date, note } = req.body;
@@ -10,15 +11,14 @@ router.post("/", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("create_seller_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("create_seller_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to create seller wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to create seller wallet" });
     }
 
     const sellerIdInt = parseInt(sellerId);
@@ -33,7 +33,7 @@ router.post("/", adminAuth, async (req, res) => {
             name: true,
             phone: true,
             createtAt: true,
-          }
+          },
         },
       },
     });
@@ -119,6 +119,8 @@ router.post("/", adminAuth, async (req, res) => {
     if (!res.headersSent) {
       return res.status(500).json({ error: error.message });
     }
+  } finally {
+    await auditLog(req, res, "ADMIN", "CREATE_SELLER_WALLET");
   }
 });
 
@@ -170,6 +172,8 @@ router.post("/resetHold", adminAuth, async (req, res) => {
   } catch (error) {
     console.error("Error resetting hold:", error);
     res.status(500).json({ error: "Internal server error." });
+  } finally {
+    await auditLog(req, res, "ADMIN", "RESET_SELLER_HOLD");
   }
 });
 
@@ -177,37 +181,23 @@ router.get("/", adminAuth, async (req, res) => {
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_seller_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_seller_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to read seller wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read seller wallet" });
     }
-    
+
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const sellerId = parseInt(req.query.sellerId) || undefined;
-    const { type, providerId, agentId } = req?.user;
-    const isProvider = type === "PROVIDER";
-    const isAgent = type === "AGENT";
 
-    const where = isProvider
-      ? {
-          providerId: parseInt(providerId),
-          sellerId,
-        }
-      : isAgent
-      ? {
-          agentId: parseInt(agentId),
-          sellerId,
-        }
-      : {
-          sellerId,
-        };
+    const where = {
+      sellerId,
+    };
 
     let seller = null;
     if (sellerId) {
@@ -218,15 +208,10 @@ router.get("/", adminAuth, async (req, res) => {
         select: {
           id: true,
           name: true,
-          username: true,
-          phone: true,
-          active: true,
-          createtAt: true,
           provider: {
             select: {
-              id: true,
               name: true,
-            }
+            },
           },
         },
       });
@@ -234,13 +219,28 @@ router.get("/", adminAuth, async (req, res) => {
     const total = await prisma.wallet.count({ where });
     const wallets = await prisma.wallet.findMany({
       where,
+
       take,
       skip,
       orderBy: {
         createtAt: "desc",
       },
     });
-    res.json({ data: wallets, total, seller });
+
+    const walletsCount = await prisma.wallet.findMany({
+      where,
+      select: {
+        amount: true,
+        type: true,
+      },
+    });
+
+    const totalWallets = walletsCount
+      ?.filter((el) => el?.type === "PAYMENT")
+      ?.map((el) => el.amount)
+      ?.reduce((a, b) => a + b, 0);
+
+    res.json({ data: wallets, total, seller: { ...seller, totalWallets } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -252,15 +252,14 @@ router.get("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("read_seller_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("read_seller_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to read seller wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to read seller wallet" });
     }
 
     const wallet = await prisma.wallet.findUnique({
@@ -279,15 +278,14 @@ router.delete("/:id", adminAuth, async (req, res) => {
   const userType = req.user.type;
 
   try {
-
     if (
-      userType !== 'ADMIN' || 
-      (
-        !permissions.includes("superadmin") &&
-        !permissions.includes("delete_seller_wallet")
-      )
+      userType !== "ADMIN" ||
+      (!permissions.includes("superadmin") &&
+        !permissions.includes("delete_seller_wallet"))
     ) {
-      return res.status(400).json({ error: "No permission to delete seller wallet" });
+      return res
+        .status(400)
+        .json({ error: "No permission to delete seller wallet" });
     }
 
     const wallet = await prisma.wallet.findUnique({
@@ -359,6 +357,8 @@ router.delete("/:id", adminAuth, async (req, res) => {
     res.json({ message: "Wallet deleted and amount returned." });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    await auditLog(req, res, "ADMIN", "DELETE_SELLER_WALLET");
   }
 });
 
