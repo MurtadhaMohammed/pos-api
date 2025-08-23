@@ -10,7 +10,7 @@ const fetch = (...args) =>
 
 // insert Provider
 router.post("/", adminAuth, async (req, res) => {
-  const { name, phone, address, username, password } = req.body;
+  const { name, phone, address, username, password , province } = req.body;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
@@ -44,6 +44,7 @@ router.post("/", adminAuth, async (req, res) => {
       data: {
         name,
         phone,
+        province,
         address,
         adminId: admin.id,
       },
@@ -77,24 +78,38 @@ router.get("/", adminAuth, async (req, res) => {
     const take = parseInt(req.query.take || 8);
     const skip = parseInt(req.query.skip || 0);
     const q = req.query.q || "";
-    const where = q
-      ? {
-          OR: [
-            {
-              name: {
-                contains: q,
+    const province = req.query.province || "";
+    
+    const where = {
+      AND: [
+        q
+          ? {
+              OR: [
+                {
+                  name: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  phone: {
+                    contains: q,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            }
+          : {},
+        province
+          ? {
+              province: {
+                equals: province,
                 mode: "insensitive",
               },
-            },
-            {
-              phone: {
-                contains: q,
-                mode: "insensitive",
-              },
-            },
-          ],
-        }
-      : {};
+            }
+          : {},
+      ],
+    };
     const total = await prisma.provider.count({ where });
     const providers = await prisma.provider.findMany({
       where,
@@ -103,6 +118,7 @@ router.get("/", adminAuth, async (req, res) => {
         name: true,
         phone: true,
         address: true,
+        province: true,
         active: true,
         createtAt: true,
         walletAmount: true,
@@ -153,7 +169,7 @@ router.get("/:id", adminAuth, async (req, res) => {
 // Update Provider by ID
 router.put("/:id", adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, phone, address } = req.body;
+  const { name, phone, address, province } = req.body;
   const permissions = req.user.permissions || [];
   const userType = req.user.type;
 
@@ -170,7 +186,7 @@ router.put("/:id", adminAuth, async (req, res) => {
 
     const provider = await prisma.provider.update({
       where: { id: Number(id) },
-      data: { name, phone, address },
+      data: { name, phone, address, province },
     });
     res.json(provider);
   } catch (error) {

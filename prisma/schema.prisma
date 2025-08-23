@@ -28,6 +28,7 @@ model Provider {
   name           String
   phone          String?
   address        String?
+  province       String?
   adminId        Int?             @unique
   createtAt      DateTime         @default(now())
   active         Boolean          @default(true)
