@@ -162,6 +162,7 @@ exports.purchase = async (hold_id, sellerId, note = "") => {
       code: codes,
       name: stock[0]?.plan?.title || "Unknown Plan",
       companyPrice,
+      note: payment?.note,
     };
   } catch (error) {
     console.error("Transaction Failed:", error);
